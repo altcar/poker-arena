@@ -402,54 +402,6 @@ function verdictText(m) {
   return m.verdict === "a" ? `${m.a} won` : `${m.b} won`;
 }
 
-function tournamentView() {
-  const page = h("div", { class: "page" });
-  page.append(h("h1", {}, "Tournament"));
-  loadTournament().then((data) => {
-    const board = data.tournament?.groups?.[0]?.board;
-    const teams = board?.teams || [];
-    const champion = data.tournament?.champion;
-    page.append(
-      h("div", { class: "card" },
-        h("h2", {}, "Five-bot round robin"),
-        h("p", {}, "Every bot plays every other heads-up, 100 duplicate deals with the seats swapped. Score is mean big blinds won per 100 hands, with the 95% interval."),
-        champion ? h("p", {}, [h("span", { class: "badge gold" }, "Champion"), " ", h("strong", {}, champion)]) : null,
-      ),
-    );
-    if (teams.length) {
-      const rows = teams.map((t) =>
-        h("tr", { class: t.team === "You" ? "you" : "" },
-          h("td", { class: "num" }, String(t.rank)),
-          h("td", {}, h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team)),
-          h("td", { class: `num ${t.score > 0 ? "pos" : t.score < 0 ? "neg" : ""}` }, fmtBB(t.score)),
-          h("td", { class: "num muted" }, t.ci95 == null ? "—" : `± ${t.ci95.toFixed(1)}`),
-          h("td", { class: "num" }, `${t.wins}–${t.draws}–${t.losses}`),
-          h("td", { class: "num muted" }, String(t.opponents_played)),
-          h("td", { class: "num muted" }, String(t.faults)),
-        ),
-      );
-      page.append(
-        h("div", { class: "card" },
-          h("div", { class: "tablewrap" },
-            h("table", { class: "tbl" },
-              h("thead", {}, h("tr", {},
-                h("th", { class: "num" }, "#"), h("th", {}, "Team"),
-                h("th", { class: "num" }, "bb/100"), h("th", { class: "num" }, "95% ±"),
-                h("th", { class: "num" }, "W–D–L"), h("th", { class: "num" }, "Ops"), h("th", { class: "num" }, "Faults"),
-              )),
-              h("tbody", {}, rows),
-            ),
-          ),
-        ),
-      );
-    }
-    page.append(h("p", { class: "muted small" }, "The human player's live results are recorded separately on the Play page."));
-  }).catch((error) => {
-    page.append(h("div", { class: "card error" }, `Could not load the tournament: ${error.message}`));
-  });
-  return page;
-}
-
 function matrixView() {
   const page = h("div", { class: "page" });
   page.append(h("h1", {}, "Head-to-head"));
