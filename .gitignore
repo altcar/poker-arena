@@ -24,3 +24,6 @@ data/missing-search-log.txt
 data/model-load-test.txt
 data/pkl-load-test.txt
 data/sync-log.txt
+data/*-test.txt
+data/*-log.txt
+data/python-test-dom.*

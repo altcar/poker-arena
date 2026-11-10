@@ -113,6 +113,25 @@ The current run used **10 duplicate deals per pairing** for all 62 available
 models (5 fork bots + 57 competition teams). `ddd` was added after the shards
 started, so it was filled in with a `--focus ddd` run.
 
+## Browser Python runtime
+
+The 57 competition models are playable in the browser through Pyodide:
+
+- `public/py/shim.py` provides `card_utils`, `player_action` and `game_state`
+  (including the mutable `GameState` used by bismillahinsurance, humza000 and
+  tvt for private replay). It is the same public API the arena gave the models.
+- `public/python_runtime.js` loads Pyodide v0.28.3 and numpy, installs the shim,
+  fetches `/team-files/<team>/` into Pyodide's filesystem, and wraps each model
+  in a `PythonBot` with `seed` / `run` / `end_game`.
+- `scripts/prepare_browser_runtime.mjs` copies each team's submission files to
+  `public/team-files/` and writes the manifest. `tvt.pkl` is excluded (33 MB;
+  tvt's `Model()` works without it). The rest is 13.2 MB.
+- `scripts/copy_browser_engine.mjs` copies the browser-safe JS engine
+  (`src/*.js`, no `worker.js`) to `public/engine/`.
+- The Play page uses the local `Game` for tables containing a competition bot;
+  the five JS bots still use the worker API. The Teams page has checkboxes for
+  all 57 competition teams and the five JS bots.
+
 ## Verification (all passing)
 
 - `npm run verify` — 100 hands, chips conserved, no faults, all actions legal.
@@ -120,6 +139,11 @@ started, so it was filled in with a `--focus ddd` run.
 - `pytest tests/test_model.py` in `poker_bot/` — 9 passed.
 - `scripts/test_team_models.py` — all 56 competition folders load.
 - `scripts/test_all_pkls.py` — the pickles load with the right path order.
+- `scripts/test_all_browser_models.py` — all 57 models load and act through the shim.
+- `scripts/test_pyodide.mjs` — all 57 models load and act in **real Pyodide**.
+- `scripts/test_browser_pyodide.mjs` — the browser Pyodide path returns actions.
+- `scripts/test_live_play.mjs` / `test_live_multi.mjs` — the deployed site played
+  a hand with 1 and 3 Python competition bots.
 - Headless Edge verified the new Play setup and Teams picker locally.
 
 ## Deployment
@@ -138,9 +162,13 @@ Two git-connected paths are set up:
    `shivateja`, `teammeat`, `zd`. Add a repo to
    `data/team_repos_extra.json`, rerun `scripts/sync_team_files.mjs`, then
    `scripts/finalize_team_files.mjs` and `scripts/make_teams_data.mjs`.
-2. **Competition bots cannot play live in the browser.** They are Python
-   models; only the five fork bots have a JS port.
+2. **The first Python bot load is slow.** Pyodide + numpy (~10 MB) comes from
+   jsDelivr, then the selected teams' files are fetched. The progress card shows
+   each step; later tables reuse the runtime. If the CDN is blocked, the five
+   JS bots still work.
 3. **Wide intervals:** re-run the round robin with more deals for tighter
    confidence intervals.
 4. **D1 matches** are no longer used by the Matches page; the page reads our
    generated results. `/api/matches` still supports POST for compatibility.
+5. **`tvt.pkl` is excluded from the browser assets** (33 MB); tvt runs
+   `Model()` instead. The pickle remains in `all-teams/tvt/`.

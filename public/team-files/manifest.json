@@ -1,0 +1,573 @@
+{
+  "1-project-1": {
+    "files": [
+      "1-project-1.pkl",
+      "fasteval.py",
+      "model.py",
+      "preflop_table.py"
+    ],
+    "model": "model.py",
+    "pkl": "1-project-1.pkl"
+  },
+  "all-in-fold-50-50": {
+    "files": [
+      "all-in-fold-50-50.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "all-in-fold-50-50.pkl"
+  },
+  "apex_poker": {
+    "files": [
+      "apex_poker.pkl",
+      "evaluator.py",
+      "model.py",
+      "preflop_tables.py",
+      "strategy.py",
+      "tracker.py"
+    ],
+    "model": "model.py",
+    "pkl": "apex_poker.pkl"
+  },
+  "audigo": {
+    "files": [
+      "audigo.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "audigo.pkl"
+  },
+  "bismillahinsurance": {
+    "files": [
+      "bismillahInsurance.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "bismillahInsurance.pkl"
+  },
+  "blackout": {
+    "files": [
+      "blackout.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "blackout.pkl"
+  },
+  "brinzeroseven": {
+    "files": [
+      "model.py",
+      "myteam.pkl",
+      "pb_cards.py",
+      "pb_equity.py",
+      "pb_opponents.py",
+      "pb_preflop.py"
+    ],
+    "model": "model.py",
+    "pkl": "myteam.pkl"
+  },
+  "brokebutbrilliant": {
+    "files": [
+      "bot_tables.py",
+      "botcore.py",
+      "brokebutbrilliant.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "brokebutbrilliant.pkl"
+  },
+  "chaos": {
+    "files": [
+      "chaos.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "chaos.pkl"
+  },
+  "chm": {
+    "files": [
+      "bot_brain.py",
+      "bot_decide.py",
+      "bot_eval.py",
+      "bot_opp.py",
+      "bot_preflop.py",
+      "chm.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "chm.pkl"
+  },
+  "claude-make-no-mistakes": {
+    "files": [
+      "claude-make-no-mistakes.pkl",
+      "model.py",
+      "poker_math.py"
+    ],
+    "model": "model.py",
+    "pkl": "claude-make-no-mistakes.pkl"
+  },
+  "ddd": {
+    "files": [
+      "ddd.pkl",
+      "handeval.py",
+      "model.py",
+      "preflop_table.py"
+    ],
+    "model": "model.py",
+    "pkl": "ddd.pkl"
+  },
+  "devjoe9": {
+    "files": [
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": ""
+  },
+  "dryrun": {
+    "files": [
+      "dryrun.pkl",
+      "fasteval.py",
+      "model.py",
+      "preflop_table.py",
+      "ranges.py"
+    ],
+    "model": "model.py",
+    "pkl": "dryrun.pkl"
+  },
+  "duckies": {
+    "files": [
+      "duckies.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "duckies.pkl"
+  },
+  "error-no-tokens-left": {
+    "files": [
+      "error-no-tokens-left.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "error-no-tokens-left.pkl"
+  },
+  "error404": {
+    "files": [
+      "equity.py",
+      "error404.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "error404.pkl"
+  },
+  "fold-to-gpt": {
+    "files": [
+      "fold-to-gpt.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "fold-to-gpt.pkl"
+  },
+  "gemiclaudex": {
+    "files": [
+      "arena_sdk.py",
+      "arena_translate.py",
+      "combo_bot.py",
+      "core_allin.py",
+      "core_equity.py",
+      "core_interface.py",
+      "gemiclaudex.pkl",
+      "main_allin.py",
+      "main_bot.py",
+      "main_fallback.py",
+      "main_opponent.py",
+      "main_postflop.py",
+      "model.py",
+      "team_equity_table.py",
+      "team_opponent.py",
+      "team_preflop.py",
+      "team_ranges.py"
+    ],
+    "model": "model.py",
+    "pkl": "gemiclaudex.pkl"
+  },
+  "git-happens": {
+    "files": [
+      "fasteval.py",
+      "git-happens.pkl",
+      "model.py",
+      "preflop_data.py"
+    ],
+    "model": "model.py",
+    "pkl": "git-happens.pkl"
+  },
+  "gitpulse": {
+    "files": [
+      "fasteval.py",
+      "gitpulse.pkl",
+      "model.py",
+      "preflop_data.py"
+    ],
+    "model": "model.py",
+    "pkl": "gitpulse.pkl"
+  },
+  "goldman-stanley": {
+    "files": [
+      "botcore.py",
+      "goldman-stanley.pkl",
+      "model.py",
+      "policy.py"
+    ],
+    "model": "model.py",
+    "pkl": "goldman-stanley.pkl"
+  },
+  "guinnessssss": {
+    "files": [
+      "guinnessssss.pkl",
+      "model.py",
+      "pbbrain.py",
+      "pbcore.py",
+      "pbpre.py"
+    ],
+    "model": "model.py",
+    "pkl": "guinnessssss.pkl"
+  },
+  "humza000": {
+    "files": [
+      "model.py",
+      "pk_eval.py",
+      "pk_pretable.py",
+      "pk_range.py"
+    ],
+    "model": "model.py",
+    "pkl": ""
+  },
+  "karma_t": {
+    "files": [
+      "karma_t.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "karma_t.pkl"
+  },
+  "kilburn": {
+    "files": [
+      "handeval.py",
+      "kilburn.pkl",
+      "model.py",
+      "preflop_tables.py"
+    ],
+    "model": "model.py",
+    "pkl": "kilburn.pkl"
+  },
+  "kimchifriedrice": {
+    "files": [
+      "fasteval.py",
+      "kimchifriedrice.pkl",
+      "model.py",
+      "pf_data.py"
+    ],
+    "model": "model.py",
+    "pkl": "kimchifriedrice.pkl"
+  },
+  "kubit": {
+    "files": [
+      "fasteval.py",
+      "kubit.pkl",
+      "model.py",
+      "preflop_table.py"
+    ],
+    "model": "model.py",
+    "pkl": "kubit.pkl"
+  },
+  "la_presion": {
+    "files": [
+      "fast_eval.py",
+      "la_presion.pkl",
+      "model.py",
+      "preflop_table.py"
+    ],
+    "model": "model.py",
+    "pkl": "la_presion.pkl"
+  },
+  "larpers_ltd": {
+    "files": [
+      "larpers_ltd.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "larpers_ltd.pkl"
+  },
+  "least-privilege": {
+    "files": [
+      "least-privilege.pkl",
+      "model.py",
+      "preflop_ranges.py",
+      "preflop_table.py"
+    ],
+    "model": "model.py",
+    "pkl": "least-privilege.pkl"
+  },
+  "manchester_fried_chicken": {
+    "files": [
+      "handeval.py",
+      "manchester_fried_chicken.pkl",
+      "model.py",
+      "preflop_nash.py",
+      "preflop_table.py",
+      "river_solver.py"
+    ],
+    "model": "model.py",
+    "pkl": "manchester_fried_chicken.pkl"
+  },
+  "manhackers": {
+    "files": [
+      "manhackers.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "manhackers.pkl"
+  },
+  "markus-he": {
+    "files": [
+      "model.py",
+      "myteam.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "myteam.pkl"
+  },
+  "mate-in-one": {
+    "files": [
+      "core.py",
+      "mate-in-one.pkl",
+      "model.py",
+      "opp.py",
+      "policy.py",
+      "policy_v1.py",
+      "tables.py"
+    ],
+    "model": "model.py",
+    "pkl": "mate-in-one.pkl"
+  },
+  "neko_nano": {
+    "files": [
+      "model.py",
+      "neko_nano.pkl",
+      "preflop_table.py"
+    ],
+    "model": "model.py",
+    "pkl": "neko_nano.pkl"
+  },
+  "null_pointers": {
+    "files": [
+      "fasteval.py",
+      "model.py",
+      "null_pointers.pkl",
+      "pf_table.py"
+    ],
+    "model": "model.py",
+    "pkl": "null_pointers.pkl"
+  },
+  "packet-loss-saint-germain": {
+    "files": [
+      "hand_eval.py",
+      "model.py",
+      "packet-loss-saint-germain.pkl",
+      "pf_tables.py"
+    ],
+    "model": "model.py",
+    "pkl": "packet-loss-saint-germain.pkl"
+  },
+  "phpirates": {
+    "files": [
+      "model.py",
+      "phpirates.pkl",
+      "pk_cards.py",
+      "pk_equity.py",
+      "pk_estimate.py",
+      "pk_eval.py",
+      "pk_opponent.py",
+      "pk_postflop.py",
+      "pk_preflop.py",
+      "pk_ranges.py",
+      "pk_tables.py"
+    ],
+    "model": "model.py",
+    "pkl": "phpirates.pkl"
+  },
+  "pointus": {
+    "files": [
+      "model.py",
+      "pointus.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "pointus.pkl"
+  },
+  "poker-i-barely-know-her": {
+    "files": [
+      "model.py",
+      "poker-i-barely-know-her.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "poker-i-barely-know-her.pkl"
+  },
+  "puhguh": {
+    "files": [
+      "model.py",
+      "puhguh.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "puhguh.pkl"
+  },
+  "ram-altman": {
+    "files": [
+      "model.py",
+      "ram-altman.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "ram-altman.pkl"
+  },
+  "relief-grid": {
+    "files": [
+      "brain.py",
+      "fasteval.py",
+      "model.py",
+      "preflop_table.py",
+      "relief-grid.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "relief-grid.pkl"
+  },
+  "runtime-terror": {
+    "files": [
+      "all_in_equity.py",
+      "equity_engine.py",
+      "model.py",
+      "opponent_model.py",
+      "postflop_policy.py",
+      "preflop_policy.py",
+      "runtime-terror.pkl",
+      "sidepot_equity.py"
+    ],
+    "model": "model.py",
+    "pkl": "runtime-terror.pkl"
+  },
+  "semi-cracked-devs": {
+    "files": [
+      "features.py",
+      "model.py",
+      "poker_eval.py",
+      "pokey_strategy.py",
+      "semi-cracked-devs.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "semi-cracked-devs.pkl"
+  },
+  "sk_poker": {
+    "files": [
+      "SK_Poker.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "SK_Poker.pkl"
+  },
+  "study-holic": {
+    "files": [
+      "model.py",
+      "pokerlib.py",
+      "preflop_table.py",
+      "study-holic.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "study-holic.pkl"
+  },
+  "tax_reframers": {
+    "files": [
+      "bucket_data.py",
+      "buckets.py",
+      "hand_eval.py",
+      "model.py",
+      "preflop_data.py",
+      "tax_reframers.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "tax_reframers.pkl"
+  },
+  "terpsichord": {
+    "files": [
+      "ask-chatgpt.pkl",
+      "model.py"
+    ],
+    "model": "model.py",
+    "pkl": "ask-chatgpt.pkl"
+  },
+  "texasholdem": {
+    "files": [
+      "model.py",
+      "poker_math.py",
+      "river_policy.py",
+      "texasholdem.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "texasholdem.pkl"
+  },
+  "the-paragons": {
+    "files": [
+      "model.py",
+      "poker_strength.py",
+      "the-paragons.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "the-paragons.pkl"
+  },
+  "the1styears": {
+    "files": [
+      "model.py",
+      "the1styears.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "the1styears.pkl"
+  },
+  "tvt": {
+    "files": [
+      "blueprint.py",
+      "model.py",
+      "translation.py"
+    ],
+    "model": "model.py",
+    "pkl": ""
+  },
+  "whitespider": {
+    "files": [
+      "hunter_chart.py",
+      "hunter_eval.py",
+      "model.py",
+      "whitespider.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "whitespider.pkl"
+  },
+  "zak": {
+    "files": [
+      "Zak.pkl",
+      "cards.py",
+      "decision.py",
+      "equity.py",
+      "hand_history.py",
+      "model.py",
+      "opponents.py",
+      "policy_net.py",
+      "policy_weights.py",
+      "strength.py",
+      "tables.py"
+    ],
+    "model": "model.py",
+    "pkl": "Zak.pkl"
+  },
+  "zna": {
+    "files": [
+      "model.py",
+      "zna.pkl"
+    ],
+    "model": "model.py",
+    "pkl": "zna.pkl"
+  }
+}

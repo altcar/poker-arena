@@ -145,13 +145,22 @@ export const BOTS = BOT_SPECS.map((spec) => ({
   Model: makeModel(spec),
 }));
 
+// Competition bots are registered at runtime by the browser Python runtime.
+const DYNAMIC_BOTS = new Map();
+
+export function registerBotSpec(spec) {
+  if (!spec || !spec.key) throw new Error("a bot spec needs a key");
+  DYNAMIC_BOTS.set(spec.key, spec);
+}
+
 export function botByKey(key) {
-  return BOTS.find((b) => b.key === key) || null;
+  return BOTS.find((b) => b.key === key) || DYNAMIC_BOTS.get(key) || null;
 }
 
 export function createBot(key) {
   const spec = botByKey(key);
   if (!spec) throw new Error(`unknown bot ${key}`);
+  if (typeof spec.create === "function") return spec.create();
   return new spec.Model();
 }
 

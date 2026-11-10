@@ -172,6 +172,10 @@ src/               the JavaScript engine, bots, game and worker
   game.js          the 6-player table (serialisable)
   worker.js        the Worker: static assets + API
 public/            the single-page app (Play, Teams, Head-to-head, Matches, About)
+  engine/          browser copy of the JS engine (generated)
+  py/shim.py       browser shims for card_utils, player_action, game_state
+  python_runtime.js  Pyodide loader and PythonBot adapter
+  team-files/      each competition team's submission files for the browser
   data/            the precomputed tournament and the live competition's board
 all-teams/         each bot's .pkl and the .py files it needs
 python/            the original Python source, including the pickle and the A-E variants
@@ -191,4 +195,8 @@ data/              generated dumps, the CSV and the live competition data
 - The five bots are the A-E variants from commit `14bc9b9` of the fork; the
   submitted `goldman-stanley.pkl` is variant B.
 - Competition models are Python pickles: they play the offline round robin,
-  but only the five fork bots run live in the browser.
+  and they also play live in the browser through Pyodide. The five fork bots
+  are hand-written JavaScript ports and start instantly.
+- The browser runtime files are generated:
+  `node scripts/prepare_browser_runtime.mjs` (team files) and
+  `node scripts/copy_browser_engine.mjs` (JS engine).

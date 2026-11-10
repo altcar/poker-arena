@@ -17,7 +17,10 @@
     "teams:data": "node scripts/make_teams_data.mjs",
     "tournament": "python scripts/run_tournament.py",
     "tournament:merge": "python scripts/merge_tournament.py",
-    "tournament:data": "node scripts/make_our_tournament.mjs"
+    "tournament:data": "node scripts/make_our_tournament.mjs",
+    "browser:team-files": "node scripts/prepare_browser_runtime.mjs",
+    "browser:engine": "node scripts/copy_browser_engine.mjs",
+    "browser:test": "node scripts/test_pyodide.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.160.0"

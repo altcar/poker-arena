@@ -1,11 +1,13 @@
 // Poker Arena front end: a hash-routed single-page app.
-//   #/play       the 6-player table (you + five bots)
-//   #/tournament standings and champion
+//   #/play       the table (you + up to five JS or Python bots)
 //   #/teams      the bots and their styles
 //   #/matrix     head-to-head matrix
 //   #/matches    every match
 //   #/team/:name one team's detail
 //   #/about      what this is and the API
+
+import { Game } from "./engine/game.js";
+import { loadTeams, registerPythonBots } from "./python_runtime.js";
 
 const main = document.getElementById("main");
 
@@ -113,10 +115,12 @@ function cardBack(small = false) {
 
 let sessionId = localStorage.getItem("pokerArenaSession") || null;
 let gameState = null;
+let localGame = null;
+let loadingMessage = null;
+const knownTeamNames = {};
 
-// Only these five bots exist in the JavaScript engine. The competition teams
-// are Python pickles, so they can be downloaded and played in the offline
-// tournament, but not run in the browser.
+// The five bots that exist in the JavaScript engine. Competition teams are
+// Python models; they run in the browser through Pyodide.
 const PLAYABLE_KEYS = ["conservative", "workhorse", "adaptive", "mixed", "aggressive"];
 const PLAYABLE_NAMES = {
   conservative: "Conservative",
@@ -128,11 +132,21 @@ const PLAYABLE_NAMES = {
 const PLAYABLE_SET = new Set(PLAYABLE_KEYS);
 const MAX_SELECTED = 6;
 
+function rememberTeams(data) {
+  for (const bot of data.bots || []) knownTeamNames[bot.key] = bot.name;
+  for (const team of data.allTeams?.teams || []) knownTeamNames[team.team] = team.team;
+  for (const row of data.teamsData || []) knownTeamNames[row.team] = row.team;
+}
+
+function teamName(key) {
+  return PLAYABLE_NAMES[key] || knownTeamNames[key] || key;
+}
+
 function readChosenBots() {
   try {
     const raw = JSON.parse(localStorage.getItem("pokerArenaBots") || "null");
     if (!Array.isArray(raw)) return null;
-    return raw.filter((key) => PLAYABLE_SET.has(key));
+    return raw.filter((key) => typeof key === "string");
   } catch {
     return null;
   }
@@ -141,25 +155,69 @@ function readChosenBots() {
 let selectedBots = new Set(readChosenBots() || PLAYABLE_KEYS);
 let humanPlaying = true;
 
+function setLoading(message) {
+  loadingMessage = message;
+  render();
+}
+
 async function startSession(name, botKeys, playing = humanPlaying) {
-  const keys = [...new Set((botKeys || []).filter((key) => PLAYABLE_SET.has(key)))];
-  if (!keys.length) keys.push(...PLAYABLE_KEYS);
   humanPlaying = playing !== false;
+  let keys = [...new Set((botKeys || []).filter((key) => typeof key === "string"))];
+  let available = new Set();
   try {
-    const data = await api("/api/session", {
-      method: "POST",
-      body: JSON.stringify({
-        humanName: humanPlaying ? (name || "You") : "Spectator",
-        botKeys: keys,
-        humanPlaying,
-      }),
+    const data = await loadTournament();
+    rememberTeams(data);
+    available = new Set(data.availableTeams || []);
+  } catch {
+    // The setup page still works with the five JS bots.
+  }
+  keys = keys.filter((key) => PLAYABLE_SET.has(key) || available.has(key));
+  if (!keys.length) keys = [...PLAYABLE_KEYS];
+
+  const needsPython = keys.some((key) => !PLAYABLE_SET.has(key));
+  if (!needsPython) {
+    try {
+      const data = await api("/api/session", {
+        method: "POST",
+        body: JSON.stringify({
+          humanName: humanPlaying ? (name || "You") : "Spectator",
+          botKeys: keys,
+          humanPlaying,
+        }),
+      });
+      localGame = null;
+      sessionId = data.sessionId;
+      gameState = data.state;
+      localStorage.setItem("pokerArenaSession", sessionId);
+      loadingMessage = null;
+      render();
+    } catch (error) {
+      alert(`Could not start the table: ${error.message}`);
+    }
+    return;
+  }
+
+  // Competition bots: run the submitted Python in the browser.
+  try {
+    setLoading("Loading the Python runtime (about 10 MB)…");
+    await loadTeams(keys, (message) => setLoading(message));
+    registerPythonBots(keys, knownTeamNames);
+    localGame = new Game({
+      humanName: humanPlaying ? (name || "You") : "Spectator",
+      botKeys: keys,
+      humanPlaying,
+      seed: Date.now() % 1000000,
     });
-    sessionId = data.sessionId;
-    gameState = data.state;
-    localStorage.setItem("pokerArenaSession", sessionId);
+    const { state } = localGame.startHand();
+    gameState = state;
+    sessionId = null;
+    localStorage.removeItem("pokerArenaSession");
+    loadingMessage = null;
     render();
   } catch (error) {
-    alert(`Could not start the table: ${error.message}`);
+    loadingMessage = null;
+    render();
+    alert(`Could not load the competition models: ${error.message}`);
   }
 }
 
@@ -177,6 +235,12 @@ async function resumeSession() {
 }
 
 async function act(kind, amount = 0) {
+  if (localGame) {
+    const { state } = localGame.act(kind, amount);
+    gameState = state;
+    render();
+    return;
+  }
   const data = await api(`/api/session/${sessionId}/action`, {
     method: "POST",
     body: JSON.stringify({ kind, amount }),
@@ -186,20 +250,34 @@ async function act(kind, amount = 0) {
 }
 
 async function nextHand() {
+  if (localGame) {
+    const { state } = localGame.startHand();
+    gameState = state;
+    render();
+    return;
+  }
   const data = await api(`/api/session/${sessionId}/next`, { method: "POST" });
   gameState = data.state;
   render();
 }
 
 async function rebuy() {
+  if (localGame) {
+    localGame.rebuy();
+    gameState = localGame.publicState();
+    render();
+    return;
+  }
   const data = await api(`/api/session/${sessionId}/rebuy`, { method: "POST" });
   gameState = data.state;
   render();
 }
 
 function newSession() {
+  localGame = null;
   sessionId = null;
   gameState = null;
+  loadingMessage = null;
   localStorage.removeItem("pokerArenaSession");
   render();
 }
@@ -231,7 +309,7 @@ function setupView() {
   const chosen = readChosenBots();
   if (chosen && chosen.length) {
     selectedBots = new Set(chosen);
-    const names = chosen.map((key) => PLAYABLE_NAMES[key] || key);
+    const names = chosen.map((key) => teamName(key));
     const countEl = h("span", {}, String(names.length + (humanPlaying ? 1 : 0)));
     const humanCheck = h("label", { class: "botcheck" },
       h("input", { type: "checkbox", checked: humanPlaying, onchange: (e) => {
@@ -250,13 +328,13 @@ function setupView() {
         h("button", { class: "ghost", onclick: () => { location.hash = "#/teams"; } }, "Change models"),
         h("button", { class: "ghost", onclick: () => startSession("Spectator", chosen, false) }, "No, just watch"),
       ),
-      h("p", { class: "muted small" }, "Your session is kept in the worker's database, so you can close the tab and come back."),
+      h("p", { class: "muted small" }, "The table stays in this tab. Competition bots load their Python runtime on first use."),
     );
   }
 
   return h("div", { class: "card" },
     h("h2", {}, "Pick your opponents"),
-    h("p", {}, "First choose up to six bots on the Teams page, then press Continue. The five playable bots are the ones that run in your browser."),
+    h("p", {}, "Choose up to six bots on the Teams page, then press Continue. The five JavaScript bots start instantly; the competition bots load the Python runtime on first use."),
     h("div", { class: "actions" },
       h("button", { class: "primary", onclick: () => { location.hash = "#/teams"; } }, "Choose models on the Teams page"),
       h("button", { class: "ghost", onclick: () => {
@@ -272,7 +350,17 @@ function playView() {
   const page = h("div", { class: "page" });
   page.append(h("h1", {}, "Play the bots"));
 
-  if (!sessionId || !gameState) {
+  if (loadingMessage) {
+    page.append(
+      h("div", { class: "card" },
+        h("h2", {}, "Getting the table ready"),
+        h("p", {}, loadingMessage),
+      ),
+    );
+    return page;
+  }
+
+  if (!localGame && (!sessionId || !gameState)) {
     const resume = h("div", { class: "card" }, "Loading your table — ");
     page.append(resume);
     resumeSession().then((ok) => {
@@ -645,6 +733,7 @@ function teamsView() {
   const page = h("div", { class: "page" });
   page.append(h("h1", {}, "Teams"));
   loadTournament().then((data) => {
+    rememberTeams(data);
     const available = new Set(data.availableTeams || []);
     const repoMap = {};
     for (const r of (data.teamsData || [])) {
@@ -660,11 +749,24 @@ function teamsView() {
       localStorage.setItem("pokerArenaBots", JSON.stringify(chosen));
       selectedBots = new Set(chosen);
       // Coming from the Teams page starts a fresh table with the new picks.
+      localGame = null;
       sessionId = null;
       gameState = null;
       localStorage.removeItem("pokerArenaSession");
       location.hash = "#/play";
     } });
+    const toggle = (key, checked, event) => {
+      if (checked) {
+        if (selected.size >= MAX_SELECTED) {
+          if (event?.target) event.target.checked = false;
+          return;
+        }
+        selected.add(key);
+      } else {
+        selected.delete(key);
+      }
+      updateFloating();
+    };
     const updateFloating = () => {
       floatingBtn.textContent = `Continue (${selected.size} selected)`;
       floatingBtn.disabled = selected.size === 0;
@@ -673,22 +775,11 @@ function teamsView() {
 
     page.append(h("h2", {}, "Playable bots"));
     page.append(h("p", { class: "muted small" },
-      "Pick up to six opponents for your table. These five bots run in the browser; the competition teams below are Python models that run in the offline tournament."));
+      "Pick up to six opponents. The five bots below run instantly; the competition bots are the real submitted Python models and load the Python runtime on first use."));
     if (myTeams.length) {
       const playableRows = myTeams.map((t) => {
         const key = teamKey(t.team);
-        const checkbox = h("input", { type: "checkbox", checked: selected.has(key), onchange: (e) => {
-          if (e.target.checked) {
-            if (selected.size >= MAX_SELECTED) {
-              e.target.checked = false;
-              return;
-            }
-            selected.add(key);
-          } else {
-            selected.delete(key);
-          }
-          updateFloating();
-        } });
+        const checkbox = h("input", { type: "checkbox", checked: selected.has(key), onchange: (e) => toggle(key, e.target.checked, e) });
         return h("tr", {},
           h("td", {}, checkbox),
           h("td", {}, h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team)),
@@ -715,7 +806,7 @@ function teamsView() {
     const allTeams = data.allTeams?.teams || [];
     page.append(h("h2", {}, `All competition bots (${allTeams.length})`));
     page.append(h("p", { class: "muted small" },
-      "Every team from the GreatUniHack 2026 poker bot competition. ✓ = model files downloaded, ✗ = not found yet. Each team name links to the GitHub repository where its model was found."));
+      "Every team from the GreatUniHack 2026 poker bot competition. ✓ = model files downloaded and playable in the browser; ✗ = not found. Each team name links to the GitHub repository where its model was found."));
     if (allTeams.length) {
       const rows = allTeams.map((t) => {
         const std = stdFromCi(t.ci95, t.samples || 0);
@@ -724,7 +815,14 @@ function teamsView() {
         const teamCell = repo
           ? h("a", { href: repo, target: "_blank", rel: "noopener" }, t.team)
           : h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team);
+        const checkbox = h("input", {
+          type: "checkbox",
+          checked: selected.has(t.team),
+          disabled: !isAvailable,
+          onchange: (e) => toggle(t.team, e.target.checked, e),
+        });
         return h("tr", {},
+          h("td", {}, checkbox),
           h("td", { class: "num" }, t.rank == null ? "—" : String(t.rank)),
           h("td", {}, teamCell,
             isAvailable ? h("span", { class: "badge green" }, " ✓") : h("span", { class: "badge red" }, " ✗")),
@@ -740,7 +838,7 @@ function teamsView() {
         h("div", { class: "card tablewrap" },
           h("table", { class: "tbl" },
             h("thead", {}, h("tr", {},
-              h("th", { class: "num" }, "#"), h("th", {}, "Team"),
+              h("th", {}, "Pick"), h("th", { class: "num" }, "#"), h("th", {}, "Team"),
               h("th", { class: "num" }, "bb/100"), h("th", { class: "num" }, "95% ±"),
               h("th", { class: "num" }, "Std"), h("th", { class: "num" }, "W–D–L"),
               h("th", { class: "num" }, "Faults"), h("th", {}, "Model"),
