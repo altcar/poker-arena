@@ -83,12 +83,14 @@ Two git-connected paths are set up and verified:
       "I'm playing" toggle, and 2–7 player tables.
 - [x] API for the game and the model decisions.
 - [x] Teams page: "My bots" + "All competition bots", with bb/100, 95% ±, Std,
-      W–D–L, faults, and ✓/✗ availability.
+      W–D–L, faults, ✓/✗ availability, and each team linking to its GitHub repo.
 - [x] Head-to-head page for all available models (live competition matrix).
-- [x] Matches page (live competition matches + recorded sessions).
+- [x] Matches page: 10 static matches + 153 live round-robin matches (21 bots,
+      20 deals each) posted to `/api/matches`.
 - [x] Tournament page removed.
 - [x] `data/all-teams.csv` — 68 teams with GitHub repo URLs (best-effort search).
 - [x] `all-teams/` — 21 bots' files (5 fork bots + 16 competition teams).
+- [x] `data/tournament_results.json` — the live round robin results.
 
 ## Known limitations / not done
 
