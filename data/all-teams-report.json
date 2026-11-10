@@ -43,9 +43,16 @@
   },
   {
     "team": "brinzeroseven",
-    "status": "not found",
-    "best": null,
-    "score": 0
+    "status": "ok",
+    "repo": "brinzeroseven/poker_bot",
+    "files": [
+      "myteam.pkl",
+      "model.py",
+      "pb_cards.py",
+      "pb_equity.py",
+      "pb_opponents.py",
+      "pb_preflop.py"
+    ]
   },
   {
     "team": "brokebutbrilliant",
@@ -115,9 +122,13 @@
   },
   {
     "team": "error404",
-    "status": "no pickle",
-    "repo": "shreeyashda/Error_404",
-    "error": "no pickle"
+    "status": "ok",
+    "repo": "shreeyashda/PokerBot",
+    "files": [
+      "error404.pkl",
+      "equity.py",
+      "model.py"
+    ]
   },
   {
     "team": "fh2",
@@ -145,9 +156,14 @@
   },
   {
     "team": "gitpulse",
-    "status": "no pickle",
-    "repo": "Zene8/gitpulse",
-    "error": "no pickle"
+    "status": "ok",
+    "repo": "Zene8/poker_bot",
+    "files": [
+      "gitpulse.pkl",
+      "fasteval.py",
+      "model.py",
+      "preflop_data.py"
+    ]
   },
   {
     "team": "goldman-stanley",
@@ -229,9 +245,16 @@
   },
   {
     "team": "manchester_fried_chicken",
-    "status": "no pickle",
-    "repo": "RayNCL2023/GUH_Manchester_Fried_Chicken",
-    "error": "no pickle"
+    "status": "ok",
+    "repo": "https://github.com/golec07/GUH_MFC_Poker_Bot",
+    "files": [
+      "manchester_fried_chicken.pkl",
+      "handeval.py",
+      "model.py",
+      "preflop_nash.py",
+      "preflop_table.py",
+      "river_solver.py"
+    ]
   },
   {
     "team": "manhackers",
@@ -241,9 +264,12 @@
   },
   {
     "team": "markus-he",
-    "status": "no pickle",
-    "repo": "Markus-He/Brolly---GreatUniHack2026---Natwest",
-    "error": "no pickle"
+    "status": "ok",
+    "repo": "Markus-He/poker_bot",
+    "files": [
+      "myteam.pkl",
+      "model.py"
+    ]
   },
   {
     "team": "mate-in-one",
@@ -299,9 +325,12 @@
   },
   {
     "team": "pointus",
-    "status": "no pickle",
-    "repo": "ZhengHaoweiVSC/PointUs-spending-and-investment-portfolio",
-    "error": "no pickle"
+    "status": "ok",
+    "repo": "ZhengHaoweiVSC/poker_bot",
+    "files": [
+      "pointus.pkl",
+      "model.py"
+    ]
   },
   {
     "team": "poker-i-barely-know-her",
@@ -377,9 +406,14 @@
   },
   {
     "team": "study-holic",
-    "status": "no pickle",
-    "repo": "study-holic/study-holic",
-    "error": "no pickle"
+    "status": "ok",
+    "repo": "study-holic/poker_bot",
+    "files": [
+      "study-holic.pkl",
+      "model.py",
+      "pokerlib.py",
+      "preflop_table.py"
+    ]
   },
   {
     "team": "tax_reframers",
@@ -395,9 +429,12 @@
   },
   {
     "team": "terpsichord",
-    "status": "not found",
-    "best": "Terpsichord/terpsichord.github.io",
-    "score": 30
+    "status": "ok",
+    "repo": "Terpsichord/poker_bot",
+    "files": [
+      "ask-chatgpt.pkl",
+      "model.py"
+    ]
   },
   {
     "team": "texasholdem",

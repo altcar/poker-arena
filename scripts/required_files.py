@@ -119,7 +119,18 @@ def main():
     folder = sys.argv[1]
     pkl = find_pkl(folder)
     if not pkl:
-        print(json.dumps({"error": "no pickle"}))
+        # A team may have submitted a single .py file instead of a pickle.
+        for name in ("model.py", "bot.py", "my_bot.py"):
+            if os.path.isfile(os.path.join(folder, name)):
+                modules = {name[:-3]}
+                sources = local_modules(modules, folder)
+                print(json.dumps({
+                    "pkl": None,
+                    "sources": [os.path.relpath(p, folder) for p in sources],
+                    "globals": [],
+                }))
+                return
+        print(json.dumps({"error": "no pickle or model.py"}))
         return
     try:
         globals_ = pickle_globals(pkl)

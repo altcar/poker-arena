@@ -174,7 +174,7 @@ async function main() {
     }
     const out = join(root, "all-teams", team);
     mkdirSync(out, { recursive: true });
-    const files = [needed.pkl, ...needed.sources];
+    const files = needed.pkl ? [needed.pkl, ...needed.sources] : needed.sources;
     for (const file of files) {
       copyFileSync(join(dest, file), join(out, file));
     }
