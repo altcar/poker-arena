@@ -1,0 +1,65 @@
+{
+  "teams": [
+    {
+      "team": "Conservative",
+      "status": "submitted",
+      "group": "A",
+      "finalist": false,
+      "plan": "A",
+      "tier": 1,
+      "tagline": "Tight hand-strength heuristic. No Monte-Carlo, no opponent model.",
+      "description": "The safest bot: a deterministic category heuristic with tight preflop ranges and no bluffs."
+    },
+    {
+      "team": "Workhorse",
+      "status": "submitted",
+      "group": "A",
+      "finalist": false,
+      "plan": "B",
+      "tier": 2,
+      "tagline": "The submitted model: preflop ranges plus Monte-Carlo equity.",
+      "description": "The goldman-stanley submission: 25 bb ranges, equity versus random hands, pot-odds calls."
+    },
+    {
+      "team": "Adaptive",
+      "status": "submitted",
+      "group": "A",
+      "finalist": false,
+      "plan": "C",
+      "tier": 3,
+      "tagline": "Workhorse plus a live opponent model.",
+      "description": "Per-team counters drive the equity range filter and switch the strategy archetype."
+    },
+    {
+      "team": "Mixed",
+      "status": "submitted",
+      "group": "A",
+      "finalist": false,
+      "plan": "D",
+      "tier": 4,
+      "tagline": "Adaptive plus mixed strategies, board texture and MDF.",
+      "description": "Blocker-aware bluffing, texture-driven sizing, small-bet defence and mixed frequencies."
+    },
+    {
+      "team": "Aggressive",
+      "status": "submitted",
+      "group": "A",
+      "finalist": false,
+      "plan": "E",
+      "tier": 5,
+      "tagline": "Maximum aggression: population exploits and overbet shoves.",
+      "description": "Tighter value against stations, wide pressure against nits, traps against maniacs."
+    },
+    {
+      "team": "You",
+      "status": "you",
+      "group": null,
+      "finalist": false,
+      "plan": null,
+      "tier": null,
+      "tagline": "The human player.",
+      "description": "You are playing live at the 6-player table."
+    }
+  ],
+  "registrations": []
+}

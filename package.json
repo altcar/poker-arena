@@ -1,0 +1,18 @@
+{
+  "name": "poker-arena",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Play a real player against the five renamed poker bots, with the competition site's matches, matrix, teams and tournament pages.",
+  "scripts": {
+    "verify": "node scripts/verify.mjs",
+    "verify:python": "python scripts/python_play.py",
+    "verify:js": "node scripts/js_play.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "csv": "node scripts/make_teams_csv.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.160.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "title": "Poker Arena",
+  "submissions": {
+    "status": "closed",
+    "why": "over"
+  },
+  "mode": "tournament",
+  "phase": "done",
+  "teams": 6,
+  "generated_at": 1794316684
+}

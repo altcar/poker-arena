@@ -1,0 +1,205 @@
+{
+  "phase": "done",
+  "rounds": 1,
+  "advance": 0,
+  "groups": [
+    {
+      "name": "A",
+      "teams": [
+        "Conservative",
+        "Workhorse",
+        "Adaptive",
+        "Mixed",
+        "Aggressive"
+      ],
+      "board": {
+        "kind": "group",
+        "provisional": false,
+        "pairs_total": 10,
+        "pairs_done": 10,
+        "teams": [
+          {
+            "team": "Adaptive",
+            "plan": "C",
+            "tier": 3,
+            "tagline": "Workhorse plus a live opponent model.",
+            "description": "Per-team counters drive the equity range filter and switch the strategy archetype.",
+            "score": 28.175,
+            "ci95": 35.238530049544224,
+            "wins": 0,
+            "draws": 4,
+            "losses": 0,
+            "opponents_played": 4,
+            "opponents_expected": 4,
+            "faults": 0,
+            "hands": 800,
+            "rank": 1
+          },
+          {
+            "team": "Mixed",
+            "plan": "D",
+            "tier": 4,
+            "tagline": "Adaptive plus mixed strategies, board texture and MDF.",
+            "description": "Blocker-aware bluffing, texture-driven sizing, small-bet defence and mixed frequencies.",
+            "score": 17.11875,
+            "ci95": 36.01097449829547,
+            "wins": 0,
+            "draws": 4,
+            "losses": 0,
+            "opponents_played": 4,
+            "opponents_expected": 4,
+            "faults": 0,
+            "hands": 800,
+            "rank": 2
+          },
+          {
+            "team": "Aggressive",
+            "plan": "E",
+            "tier": 5,
+            "tagline": "Maximum aggression: population exploits and overbet shoves.",
+            "description": "Tighter value against stations, wide pressure against nits, traps against maniacs.",
+            "score": 0.9187499999999993,
+            "ci95": 38.83712383022983,
+            "wins": 0,
+            "draws": 4,
+            "losses": 0,
+            "opponents_played": 4,
+            "opponents_expected": 4,
+            "faults": 0,
+            "hands": 800,
+            "rank": 3
+          },
+          {
+            "team": "Workhorse",
+            "plan": "B",
+            "tier": 2,
+            "tagline": "The submitted model: preflop ranges plus Monte-Carlo equity.",
+            "description": "The goldman-stanley submission: 25 bb ranges, equity versus random hands, pot-odds calls.",
+            "score": -7.012500000000001,
+            "ci95": 61.01369918423843,
+            "wins": 0,
+            "draws": 4,
+            "losses": 0,
+            "opponents_played": 4,
+            "opponents_expected": 4,
+            "faults": 0,
+            "hands": 800,
+            "rank": 4
+          },
+          {
+            "team": "Conservative",
+            "plan": "A",
+            "tier": 1,
+            "tagline": "Tight hand-strength heuristic. No Monte-Carlo, no opponent model.",
+            "description": "The safest bot: a deterministic category heuristic with tight preflop ranges and no bluffs.",
+            "score": -39.2,
+            "ci95": 40.3714356132363,
+            "wins": 0,
+            "draws": 4,
+            "losses": 0,
+            "opponents_played": 4,
+            "opponents_expected": 4,
+            "faults": 0,
+            "hands": 800,
+            "rank": 5
+          }
+        ],
+        "matrix": {
+          "Conservative": {
+            "Workhorse": {
+              "mean_bb": -24.65,
+              "ci95_bb": 118.97501572900578
+            },
+            "Adaptive": {
+              "mean_bb": -48.15,
+              "ci95_bb": 58.205764468943634
+            },
+            "Mixed": {
+              "mean_bb": -37.975,
+              "ci95_bb": 64.22558852673956
+            },
+            "Aggressive": {
+              "mean_bb": -46.025,
+              "ci95_bb": 67.77995548721233
+            }
+          },
+          "Workhorse": {
+            "Conservative": {
+              "mean_bb": 24.65,
+              "ci95_bb": 118.97501572900578
+            },
+            "Adaptive": {
+              "mean_bb": -44.575,
+              "ci95_bb": 116.79283504257796
+            },
+            "Mixed": {
+              "mean_bb": -19.775,
+              "ci95_bb": 122.28811884354475
+            },
+            "Aggressive": {
+              "mean_bb": 11.650000000000002,
+              "ci95_bb": 130.9598592384612
+            }
+          },
+          "Adaptive": {
+            "Conservative": {
+              "mean_bb": 48.15,
+              "ci95_bb": 58.205764468943634
+            },
+            "Workhorse": {
+              "mean_bb": 44.575,
+              "ci95_bb": 116.79283504257796
+            },
+            "Mixed": {
+              "mean_bb": 4.975,
+              "ci95_bb": 33.6241337538526
+            },
+            "Aggressive": {
+              "mean_bb": 15.0,
+              "ci95_bb": 42.49680981490781
+            }
+          },
+          "Mixed": {
+            "Conservative": {
+              "mean_bb": 37.975,
+              "ci95_bb": 64.22558852673956
+            },
+            "Workhorse": {
+              "mean_bb": 19.775,
+              "ci95_bb": 122.28811884354475
+            },
+            "Adaptive": {
+              "mean_bb": -4.975,
+              "ci95_bb": 33.6241337538526
+            },
+            "Aggressive": {
+              "mean_bb": 15.7,
+              "ci95_bb": 25.685912189566114
+            }
+          },
+          "Aggressive": {
+            "Conservative": {
+              "mean_bb": 46.025,
+              "ci95_bb": 67.77995548721233
+            },
+            "Workhorse": {
+              "mean_bb": -11.650000000000002,
+              "ci95_bb": 130.9598592384612
+            },
+            "Adaptive": {
+              "mean_bb": -15.0,
+              "ci95_bb": 42.49680981490781
+            },
+            "Mixed": {
+              "mean_bb": -15.7,
+              "ci95_bb": 25.685912189566114
+            }
+          }
+        }
+      }
+    }
+  ],
+  "finals": null,
+  "qualified": [],
+  "champion": "Adaptive"
+}

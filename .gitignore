@@ -1,0 +1,12 @@
+node_modules/
+.venv/
+.wrangler/
+.wrangler/state/
+data/python_play.json
+data/js_play.json
+data/python_batch.json
+data/js_batch.json
+data/live_teams.json
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "poker-arena",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-10",
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "poker-arena",
+      "database_id": "dfe5a016-1a78-4de0-86e4-bac69e0f71f9"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
