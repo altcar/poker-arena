@@ -309,6 +309,22 @@ pre {
 
 .controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
 
+.floating-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 30;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #111;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border-radius: 999px;
+}
+.floating-btn:hover { transform: translateY(-2px); }
+
 .botchecks {
   display: flex;
   flex-wrap: wrap;

@@ -124,10 +124,10 @@ const BOT_NAMES = {
   aggressive: "Aggressive",
 };
 
-async function startSession(name) {
+async function startSession(name, botKeys) {
   const data = await api("/api/session", {
     method: "POST",
-    body: JSON.stringify({ humanName: humanPlaying ? (name || "You") : "Spectator", botKeys: [...selectedBots], humanPlaying }),
+    body: JSON.stringify({ humanName: humanPlaying ? (name || "You") : "Spectator", botKeys: botKeys || [...selectedBots], humanPlaying }),
   });
   sessionId = data.sessionId;
   gameState = data.state;
@@ -198,36 +198,44 @@ function playView() {
       if (ok) {
         render();
       } else {
-        const countEl = h("span", {}, "six");
+        const countEl = h("span", {}, "0");
+        const selected = new Set();
+        const botChecksContainer = h("div", { class: "botchecks" });
+        api("/api/teams").then((data) => {
+          const available = data.availableTeams || [];
+          for (const key of available) {
+            const label = h("label", { class: "botcheck" },
+              h("input", { type: "checkbox", checked: true, onchange: (e) => {
+                if (e.target.checked) selected.add(key);
+                else selected.delete(key);
+                countEl.textContent = String((humanPlaying ? 1 : 0) + selected.size);
+              } }),
+              ` ${key}`,
+            );
+            selected.add(key);
+            botChecksContainer.append(label);
+          }
+          countEl.textContent = String((humanPlaying ? 1 : 0) + selected.size);
+        }).catch(() => {});
         const humanCheck = h("label", { class: "botcheck" },
           h("input", { type: "checkbox", checked: true, onchange: (e) => {
             humanPlaying = e.target.checked;
-            countEl.textContent = String((humanPlaying ? 1 : 0) + selectedBots.size);
+            countEl.textContent = String((humanPlaying ? 1 : 0) + selected.size);
           } }),
           " I'm playing",
         );
-        const botChecks = BOT_KEYS.map((key) =>
-          h("label", { class: "botcheck" },
-            h("input", {
-              type: "checkbox",
-              checked: true,
-              onchange: (e) => {
-                if (e.target.checked) selectedBots.add(key);
-                else selectedBots.delete(key);
-                countEl.textContent = String((humanPlaying ? 1 : 0) + selectedBots.size);
-              },
-            }),
-            ` ${BOT_NAMES[key]}`,
-          ),
-        );
+        selectedBots = selected;
         page.replaceChildren(
           h("div", { class: "card" }, h("h2", {}, "Take a seat"),
             h("p", {}, ["You are at a ", countEl, "-handed table. Choose the bots you want to play against."]),
-            h("div", { class: "botchecks" }, humanCheck, botChecks),
+            h("div", { class: "botchecks" }, humanCheck, botChecksContainer),
             h("p", { class: "muted small" }, "Pick up to six bots. Seven players max. Uncheck \"I'm playing\" to watch the bots play each other."),
             h("div", { class: "actions" },
               h("input", { id: "name", type: "text", value: "You", maxlength: "20" }),
-              h("button", { class: "primary", onclick: () => startSession(document.getElementById("name").value) }, "Start playing"),
+              h("button", { class: "primary", onclick: () => {
+                selectedBots = selected;
+                startSession(document.getElementById("name").value, [...selected]);
+              } }, "Start playing"),
             ),
             h("p", { class: "muted small" }, "Your session is kept in the worker's database, so you can close the tab and come back."),
           )
@@ -509,13 +517,17 @@ function matchesView() {
   return page;
 }
 
-function leaderboardTable(teams, samplesFor, availableSet = null) {
+function leaderboardTable(teams, samplesFor, availableSet = null, repoMap = null) {
   const rows = teams.map((t) => {
     const std = stdFromCi(t.ci95, samplesFor(t));
     const isAvailable = availableSet ? availableSet.has(t.team) : null;
+    const repo = repoMap ? repoMap[t.team] : null;
+    const teamCell = repo
+      ? h("a", { href: repo, target: "_blank", rel: "noopener" }, t.team)
+      : h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team);
     return h("tr", {},
       h("td", { class: "num" }, t.rank == null ? "—" : String(t.rank)),
-      h("td", {}, h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team),
+      h("td", {}, teamCell,
         isAvailable === true ? h("span", { class: "badge green" }, " ✓") : isAvailable === false ? h("span", { class: "badge red" }, " ✗") : null),
       h("td", { class: `num ${t.score > 0 ? "pos" : t.score < 0 ? "neg" : ""}` }, fmtBB(t.score)),
       h("td", { class: "num muted" }, t.ci95 == null ? "—" : `± ${t.ci95.toFixed(1)}`),
@@ -542,6 +554,10 @@ function teamsView() {
   page.append(h("h1", {}, "Teams"));
   loadTournament().then((data) => {
     const available = new Set(data.availableTeams || []);
+    const repoMap = {};
+    for (const r of (data.teamsData || [])) {
+      if (r.github_repo) repoMap[r.team] = r.github_repo;
+    }
     const myBoard = data.tournament?.groups?.[0]?.board;
     const myTeams = myBoard?.teams || [];
     page.append(h("h2", {}, "My bots"));
@@ -549,8 +565,60 @@ function teamsView() {
     if (myTeams.length) page.append(leaderboardTable(myTeams, (t) => (t.hands ? t.hands / 2 : 0), new Set(myTeams.map((t) => t.team))));
     const allTeams = data.allTeams?.teams || [];
     page.append(h("h2", {}, `All competition bots (${allTeams.length})`));
-    page.append(h("p", { class: "muted small" }, "Every team from the GreatUniHack 2026 poker bot competition, Group A. Std is the standard deviation of the per-deal bb/100, recovered from the 95% interval. ✓ = model files downloaded, ✗ = not yet."));
-    if (allTeams.length) page.append(leaderboardTable(allTeams, (t) => t.samples || 0, available));
+    page.append(h("p", { class: "muted small" }, "Every team from the GreatUniHack 2026 poker bot competition, Group A. Std is the standard deviation of the per-deal bb/100, recovered from the 95% interval. ✓ = model files downloaded, ✗ = not yet. Team name links to the GitHub repository when found."));
+    if (allTeams.length) {
+      const selected = new Set(JSON.parse(localStorage.getItem("pokerArenaBots") || "[]"));
+      const rows = allTeams.map((t) => {
+        const std = stdFromCi(t.ci95, t.samples || 0);
+        const isAvailable = available.has(t.team);
+        const repo = repoMap[t.team];
+        const teamCell = repo
+          ? h("a", { href: repo, target: "_blank", rel: "noopener" }, t.team)
+          : h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team);
+        const checkbox = h("input", { type: "checkbox", checked: selected.has(t.team), onchange: (e) => {
+          if (e.target.checked) selected.add(t.team);
+          else selected.delete(t.team);
+          floatingBtn.textContent = `Continue (${selected.size} selected)`;
+        } });
+        return h("tr", {},
+          h("td", { class: "num" }, h("input", { type: "checkbox", checked: selected.has(t.team), onchange: (e) => {
+            if (e.target.checked) selected.add(t.team);
+            else selected.delete(t.team);
+            floatingBtn.textContent = `Continue (${selected.size} selected)`;
+          } })),
+          h("td", { class: "num" }, t.rank == null ? "—" : String(t.rank)),
+          h("td", {}, teamCell,
+            isAvailable === true ? h("span", { class: "badge green" }, " ✓") : isAvailable === false ? h("span", { class: "badge red" }, " ✗") : null),
+          h("td", { class: `num ${t.score > 0 ? "pos" : t.score < 0 ? "neg" : ""}` }, fmtBB(t.score)),
+          h("td", { class: "num muted" }, t.ci95 == null ? "—" : `± ${t.ci95.toFixed(1)}`),
+          h("td", { class: "num muted" }, std == null ? "—" : std.toFixed(1)),
+          h("td", { class: "num" }, `${t.wins ?? 0}–${t.draws ?? 0}–${t.losses ?? 0}`),
+          h("td", { class: "num muted" }, String(t.faults ?? 0)),
+        );
+      });
+      const floatingBtn = h("button", { class: "floating-btn", onclick: () => {
+        const chosen = [...selected].slice(0, 6);
+        localStorage.setItem("pokerArenaBots", JSON.stringify(chosen));
+        location.hash = "#/play";
+      } }, `Continue (0 selected)`);
+      page.append(
+        h("div", { class: "card tablewrap" },
+          h("table", { class: "tbl" },
+            h("thead", {}, h("tr", {},
+              h("th", {}, "Pick"), h("th", { class: "num" }, "#"), h("th", {}, "Team"),
+              h("th", { class: "num" }, "bb/100"), h("th", { class: "num" }, "95% ±"),
+              h("th", { class: "num" }, "Std"), h("th", { class: "num" }, "W–D–L"),
+              h("th", { class: "num" }, "Faults"),
+            )),
+            h("tbody", {}, rows),
+          ),
+        ),
+      );
+      document.body.append(floatingBtn);
+      // Clean up on navigation
+      const cleanup = () => { floatingBtn.remove(); };
+      window.addEventListener("hashchange", cleanup, { once: true });
+    }
   }).catch((error) => {
     page.append(h("div", { class: "card error" }, `Could not load teams: ${error.message}`));
   });

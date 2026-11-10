@@ -176,7 +176,7 @@ async function handleApi(request, env, url) {
   }
 
   if (method === "GET" && path === "/api/teams") {
-    return json({ teams: staticTeams, bots: BOTS, allTeams, availableTeams: availableTeams.teams });
+    return json({ teams: staticTeams, bots: BOTS, allTeams, availableTeams: availableTeams.teams, teamsData });
   }
 
   if (method === "GET" && path === "/api/teams.csv") {
