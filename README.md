@@ -68,7 +68,10 @@ There are two ways to deploy on every push:
    - `CLOUDFLARE_ACCOUNT_ID` — your account id.
 
    The workflow file is committed; pushing it needs the `workflow` scope on
-   the GitHub token (`gh auth refresh -s workflow`).
+   the GitHub token. Run `gh auth refresh -h github.com -s workflow`, enter
+   the one-time code at <https://github.com/login/device>, then `git push`.
+   Without that scope, add the file yourself from
+   `.github/workflows/deploy.yml`.
 
 ## The API
 

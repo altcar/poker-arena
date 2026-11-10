@@ -13,3 +13,7 @@ files it imports (the same set `submit.py` lists for a submission).
 not. The competition's submission form (which held the repository links) is
 private; if you have a team's repository URL, add it to
 `data/team_repos.json` and re-run the script.
+
+At the time of writing the five fork bots and 16 competition teams are here;
+the other competition teams could not be found by public search because the
+submission form's repository links were never published.
