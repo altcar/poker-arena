@@ -10,7 +10,8 @@
     "verify:js": "node scripts/js_play.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "csv": "node scripts/make_teams_csv.mjs"
+    "csv": "node scripts/make_teams_csv.mjs",
+    "all-teams": "node scripts/download_team_files.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.160.0"

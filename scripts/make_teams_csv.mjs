@@ -85,7 +85,7 @@ async function main() {
   const lines = rows.map((r) =>
     [r.team, r.site_url, r.search_url, r.github_repo, r.description].map(escapeCsv).join(","),
   );
-  writeFileSync(join(root, "data", "teams.csv"), [header, ...lines].join("\n"), "utf8");
+  writeFileSync(join(root, "data", "all-teams.csv"), [header, ...lines].join("\n"), "utf8");
 
   writeFileSync(
     join(root, "src", "teams_data.js"),
@@ -93,7 +93,7 @@ async function main() {
       `export const teamsData = ${JSON.stringify(rows, null, 2)};\n`,
     "utf8",
   );
-  console.log(`wrote data/teams.csv and src/teams_data.js (${rows.length} rows)`);
+  console.log(`wrote data/all-teams.csv and src/teams_data.js (${rows.length} rows)`);
 }
 
 main().catch((error) => {

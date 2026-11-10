@@ -10,3 +10,4 @@ data/live_teams.json
 __pycache__/
 *.pyc
 .DS_Store
+.tmp/

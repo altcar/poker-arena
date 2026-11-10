@@ -53,6 +53,23 @@ wrangler d1 create poker-arena
 wrangler d1 execute poker-arena --command "CREATE TABLE ..."   # see src/worker.js
 ```
 
+### Git-connected deployments
+
+There are two ways to deploy on every push:
+
+1. **Cloudflare's native Git integration (recommended).** In the dashboard go
+   to **Workers & Pages → poker-arena → Settings → Builds → Connect**, choose
+   GitHub, and select `altcar/poker-arena`. Pushes to `main` then build and
+   deploy automatically.
+2. **GitHub Actions + Wrangler.** `.github/workflows/deploy.yml` runs
+   `wrangler deploy` on every push to `main`. Add two repository secrets:
+   - `CLOUDFLARE_API_TOKEN` — a Cloudflare API token with
+     `Cloudflare Workers: Edit` (and D1 if you want it to migrate),
+   - `CLOUDFLARE_ACCOUNT_ID` — your account id.
+
+   The workflow file is committed; pushing it needs the `workflow` scope on
+   the GitHub token (`gh auth refresh -s workflow`).
+
 ## The API
 
 | Route | Purpose |
@@ -100,12 +117,33 @@ the Python model's for a given seed and deck.
 site (`https://poker-arena-site.vercel.app/data/teams.json`), searches GitHub
 for each one with the `gh` CLI, and writes:
 
-- `data/teams.csv` — team, site URL, search URL, GitHub repository, description
+- `data/all-teams.csv` — team, site URL, search URL, GitHub repository, description
 - `src/teams_data.js` — the same rows, served by `GET /api/teams.csv`
 
 ```sh
 npm run csv
 ```
+
+The competition is over, so the file is frozen.
+
+## The all-teams folder
+
+`all-teams/<team>/` holds the files needed to run each bot: the `.pkl` plus
+the `.py` files it imports (the same set `submit.py` lists for a submission).
+The five bots in this fork are created by `scripts/seed_my_bots.py`; the
+competition teams are downloaded by `scripts/download_team_files.mjs`, which
+finds each team's public repository with GitHub search, clones it, and copies
+only the required files:
+
+```sh
+.venv/Scripts/python.exe scripts/seed_my_bots.py
+node scripts/download_team_files.mjs
+```
+
+`data/all-teams-report.json` records which teams were found and which were
+not. The competition's submission form (which held the repository links) is
+private, so a few teams cannot be found by search; drop their repository URL
+into `data/team_repos.json` and re-run the script to add them.
 
 ## Project layout
 
@@ -122,9 +160,12 @@ src/               the JavaScript engine, bots, game and worker
   game.js          the 6-player table (serialisable)
   worker.js        the Worker: static assets + API
 public/            the single-page app (Play, Tournament, Teams, Matrix, Matches, About)
+  data/            the precomputed tournament and the live competition's board
+all-teams/         each bot's .pkl and the .py files it needs
 python/            the original Python source, including the pickle and the A-E variants
-scripts/           verification, tournament precompute and CSV tools
-data/              generated dumps and the CSV
+scripts/           verification, tournament precompute, CSV and team download tools
+data/              generated dumps, the CSV and the live competition data
+.github/workflows/ the Wrangler deploy workflow
 ```
 
 ## Notes

@@ -1,0 +1,455 @@
+[
+  {
+    "team": "1-project-1",
+    "status": "no pickle",
+    "repo": "8-BitCode/1-Project-1",
+    "error": "no pickle"
+  },
+  {
+    "team": "all-in-fold-50-50",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "apex_poker",
+    "status": "no pickle",
+    "repo": "dylan-gov/apex-poker",
+    "error": "no pickle"
+  },
+  {
+    "team": "audigo",
+    "status": "not found",
+    "best": "coalaura/audigo",
+    "score": 30
+  },
+  {
+    "team": "ayo",
+    "status": "no pickle",
+    "repo": "Ibitayo-S/GUH-2026",
+    "error": "no pickle"
+  },
+  {
+    "team": "bismillahinsurance",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "blackout",
+    "status": "no pickle",
+    "repo": "AMUKA0/Blackout",
+    "error": "no pickle"
+  },
+  {
+    "team": "brinzeroseven",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "brokebutbrilliant",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "byteclub",
+    "status": "not found",
+    "best": "byteclubfr/site",
+    "score": 30
+  },
+  {
+    "team": "chaos",
+    "status": "no pickle",
+    "repo": "PicasoTheDeal/CHAOS-Engine",
+    "error": "no pickle"
+  },
+  {
+    "team": "chm",
+    "status": "no pickle",
+    "repo": "carloshempresa-byte/chm-intelligence",
+    "error": "no pickle"
+  },
+  {
+    "team": "claude-make-no-mistakes",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "ddd",
+    "status": "no pickle",
+    "repo": "JorgeCostaMacia/ddd-dotnet",
+    "error": "no pickle"
+  },
+  {
+    "team": "devjoe9",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "dryrun",
+    "status": "ok",
+    "repo": "aaryanparveen/dryrun-pokerbot",
+    "files": [
+      "dryrun.pkl",
+      "fasteval.py",
+      "model.py",
+      "preflop_table.py",
+      "ranges.py"
+    ]
+  },
+  {
+    "team": "duckies",
+    "status": "no pickle",
+    "repo": "NicoleLeeChiaQi/GreatUniHack---Duckies",
+    "error": "no pickle"
+  },
+  {
+    "team": "error-no-tokens-left",
+    "status": "not found",
+    "best": "Mdshobu/Liberty-House-Club-Whitepaper",
+    "score": 50
+  },
+  {
+    "team": "error404",
+    "status": "no pickle",
+    "repo": "shreeyashda/Error_404",
+    "error": "no pickle"
+  },
+  {
+    "team": "fh2",
+    "status": "no pickle",
+    "repo": "qiangqiang101/FH2Underglow",
+    "error": "no pickle"
+  },
+  {
+    "team": "fold-to-gpt",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "gemiclaudex",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "git-happens",
+    "status": "no pickle",
+    "repo": "GitHappens-NatHacks/GitHappens",
+    "error": "no pickle"
+  },
+  {
+    "team": "gitpulse",
+    "status": "no pickle",
+    "repo": "Zene8/gitpulse",
+    "error": "no pickle"
+  },
+  {
+    "team": "goldman-stanley",
+    "status": "not found",
+    "best": "StanleyGoldman/StanleyGoldman",
+    "score": 30
+  },
+  {
+    "team": "guinnessssss",
+    "status": "ok",
+    "repo": "artem-dev-c/guinnessssss-pokerbot",
+    "files": [
+      "guinnessssss.pkl",
+      "model.py",
+      "pbbrain.py",
+      "pbcore.py",
+      "pbpre.py"
+    ]
+  },
+  {
+    "team": "humza000",
+    "status": "no pickle",
+    "repo": "Humza000/GreatUniHack-2026",
+    "error": "no pickle"
+  },
+  {
+    "team": "ineffective-altruists",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "karma_t",
+    "status": "no pickle",
+    "repo": "PolatOzaslan21/econ217-karma-test",
+    "error": "no pickle"
+  },
+  {
+    "team": "kilburn",
+    "status": "not found",
+    "best": "Seulyy/TF2-Gamemode-GMod13",
+    "score": 10
+  },
+  {
+    "team": "kimchifriedrice",
+    "status": "not found",
+    "best": "niha12347/Kimchifriedrice",
+    "score": 30
+  },
+  {
+    "team": "kubit",
+    "status": "no pickle",
+    "repo": "forsing/Quantum_4_Fourier",
+    "error": "no pickle"
+  },
+  {
+    "team": "la_presion",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "larpers_ltd",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "least-privilege",
+    "status": "no pickle",
+    "repo": "saplumbaga/mcp-least-privilege",
+    "error": "no pickle"
+  },
+  {
+    "team": "ludus",
+    "status": "no pickle",
+    "repo": "fkappen/ludus-site",
+    "error": "no pickle"
+  },
+  {
+    "team": "manchester_fried_chicken",
+    "status": "no pickle",
+    "repo": "RayNCL2023/GUH_Manchester_Fried_Chicken",
+    "error": "no pickle"
+  },
+  {
+    "team": "manhackers",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "markus-he",
+    "status": "no pickle",
+    "repo": "Markus-He/Brolly---GreatUniHack2026---Natwest",
+    "error": "no pickle"
+  },
+  {
+    "team": "mate-in-one",
+    "status": "not found",
+    "best": "SebLague/Mate-In-One",
+    "score": 30
+  },
+  {
+    "team": "neko_nano",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "null_pointers",
+    "status": "ok",
+    "repo": "meerkatmeer/pokerbot_NULL_POINTERS",
+    "files": [
+      "null_pointers.pkl",
+      "fasteval.py",
+      "model.py",
+      "pf_table.py"
+    ]
+  },
+  {
+    "team": "oridox-solutions",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "packet-loss-saint-germain",
+    "status": "ok",
+    "repo": "AlexPeirongLi/packet-loss-saint-germain",
+    "files": [
+      "packet-loss-saint-germain.pkl",
+      "hand_eval.py",
+      "model.py",
+      "pf_tables.py"
+    ]
+  },
+  {
+    "team": "phpirates",
+    "status": "no pickle",
+    "repo": "EileenYJH/PHPirates",
+    "error": "no pickle"
+  },
+  {
+    "team": "pocketaces",
+    "status": "not found",
+    "best": "Kishore7298/PocketAcesHiringChallenge",
+    "score": 30
+  },
+  {
+    "team": "pointus",
+    "status": "no pickle",
+    "repo": "ZhengHaoweiVSC/PointUs-spending-and-investment-portfolio",
+    "error": "no pickle"
+  },
+  {
+    "team": "poker-i-barely-know-her",
+    "status": "no pickle",
+    "repo": "Shivam-Sheth/Gambler-s-Wordle",
+    "error": "no pickle"
+  },
+  {
+    "team": "prefer-not-to-say",
+    "status": "not found",
+    "best": "sperm-in-melville/bartleby.ai",
+    "score": 10
+  },
+  {
+    "team": "puhguh",
+    "status": "ok",
+    "repo": "Xuanming-Guo/poker-bot-puhguh",
+    "files": [
+      "puhguh.pkl",
+      "model.py"
+    ]
+  },
+  {
+    "team": "ram-altman",
+    "status": "no pickle",
+    "repo": "bodi04/ram-altman",
+    "error": "no pickle"
+  },
+  {
+    "team": "relief-grid",
+    "status": "no pickle",
+    "repo": "samitha-esc/ReliefGrid",
+    "error": "no pickle"
+  },
+  {
+    "team": "runtime-terror",
+    "status": "ok",
+    "repo": "affank1020/runtime-terror-submission",
+    "files": [
+      "runtime-terror.pkl",
+      "all_in_equity.py",
+      "equity_engine.py",
+      "model.py",
+      "opponent_model.py",
+      "postflop_policy.py",
+      "preflop_policy.py",
+      "sidepot_equity.py"
+    ]
+  },
+  {
+    "team": "semi-cracked-devs",
+    "status": "ok",
+    "repo": "CS101-o/semi-cracked-devs",
+    "files": [
+      "semi-cracked-devs.pkl",
+      "features.py",
+      "model.py",
+      "poker_eval.py",
+      "pokey_strategy.py"
+    ]
+  },
+  {
+    "team": "shivateja",
+    "status": "not found",
+    "best": "Shivateja-31/Shivateja31",
+    "score": 30
+  },
+  {
+    "team": "sk_poker",
+    "status": "not found",
+    "best": "lbn187/PokerSkill",
+    "score": 50
+  },
+  {
+    "team": "study-holic",
+    "status": "no pickle",
+    "repo": "study-holic/study-holic",
+    "error": "no pickle"
+  },
+  {
+    "team": "tax_reframers",
+    "status": "no pickle",
+    "repo": "aldrichbanas07/TaxReframers",
+    "error": "no pickle"
+  },
+  {
+    "team": "teammeat",
+    "status": "not found",
+    "best": "sutharsan182007-lgtm/TEAMmeat",
+    "score": 30
+  },
+  {
+    "team": "terpsichord",
+    "status": "not found",
+    "best": "Terpsichord/terpsichord.github.io",
+    "score": 30
+  },
+  {
+    "team": "texasholdem",
+    "status": "no pickle",
+    "repo": "Edge358/TexasHoldem",
+    "error": "no pickle"
+  },
+  {
+    "team": "the-paragons",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "the1styears",
+    "status": "not found",
+    "best": null,
+    "score": 0
+  },
+  {
+    "team": "tvt",
+    "status": "no pickle",
+    "repo": "emilhalonen/Linux_Administration_TVT26KMO",
+    "error": "no pickle"
+  },
+  {
+    "team": "whitespider",
+    "status": "ok",
+    "repo": "Julesli0217/whitespider-poker-bot",
+    "files": [
+      "whitespider.pkl",
+      "hunter_chart.py",
+      "hunter_eval.py",
+      "model.py"
+    ]
+  },
+  {
+    "team": "zak",
+    "status": "no pickle",
+    "repo": "sqrtZak/LanguageDictatorApp_GreatUniHack2026",
+    "error": "no pickle"
+  },
+  {
+    "team": "zd",
+    "status": "no pickle",
+    "repo": "Punk2025/zd-",
+    "error": "no pickle"
+  },
+  {
+    "team": "zna",
+    "status": "no pickle",
+    "repo": "pikassoo-12/azimut_znanii6",
+    "error": "no pickle"
+  }
+]
