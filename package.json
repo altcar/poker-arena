@@ -11,7 +11,13 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "csv": "node scripts/make_teams_csv.mjs",
-    "all-teams": "node scripts/download_team_files.mjs"
+    "all-teams": "node scripts/download_team_files.mjs",
+    "teams:sync": "node scripts/sync_team_files.mjs",
+    "teams:csv": "node scripts/finalize_team_files.mjs",
+    "teams:data": "node scripts/make_teams_data.mjs",
+    "tournament": "python scripts/run_tournament.py",
+    "tournament:merge": "python scripts/merge_tournament.py",
+    "tournament:data": "node scripts/make_our_tournament.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.160.0"

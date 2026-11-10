@@ -113,26 +113,54 @@ function cardBack(small = false) {
 
 let sessionId = localStorage.getItem("pokerArenaSession") || null;
 let gameState = null;
-let selectedBots = new Set(["conservative", "workhorse", "adaptive", "mixed", "aggressive"]);
-let humanPlaying = true;
-const BOT_KEYS = ["conservative", "workhorse", "adaptive", "mixed", "aggressive"];
-const BOT_NAMES = {
+
+// Only these five bots exist in the JavaScript engine. The competition teams
+// are Python pickles, so they can be downloaded and played in the offline
+// tournament, but not run in the browser.
+const PLAYABLE_KEYS = ["conservative", "workhorse", "adaptive", "mixed", "aggressive"];
+const PLAYABLE_NAMES = {
   conservative: "Conservative",
   workhorse: "Workhorse",
   adaptive: "Adaptive",
   mixed: "Mixed",
   aggressive: "Aggressive",
 };
+const PLAYABLE_SET = new Set(PLAYABLE_KEYS);
+const MAX_SELECTED = 6;
 
-async function startSession(name, botKeys) {
-  const data = await api("/api/session", {
-    method: "POST",
-    body: JSON.stringify({ humanName: humanPlaying ? (name || "You") : "Spectator", botKeys: botKeys || [...selectedBots], humanPlaying }),
-  });
-  sessionId = data.sessionId;
-  gameState = data.state;
-  localStorage.setItem("pokerArenaSession", sessionId);
-  render();
+function readChosenBots() {
+  try {
+    const raw = JSON.parse(localStorage.getItem("pokerArenaBots") || "null");
+    if (!Array.isArray(raw)) return null;
+    return raw.filter((key) => PLAYABLE_SET.has(key));
+  } catch {
+    return null;
+  }
+}
+
+let selectedBots = new Set(readChosenBots() || PLAYABLE_KEYS);
+let humanPlaying = true;
+
+async function startSession(name, botKeys, playing = humanPlaying) {
+  const keys = [...new Set((botKeys || []).filter((key) => PLAYABLE_SET.has(key)))];
+  if (!keys.length) keys.push(...PLAYABLE_KEYS);
+  humanPlaying = playing !== false;
+  try {
+    const data = await api("/api/session", {
+      method: "POST",
+      body: JSON.stringify({
+        humanName: humanPlaying ? (name || "You") : "Spectator",
+        botKeys: keys,
+        humanPlaying,
+      }),
+    });
+    sessionId = data.sessionId;
+    gameState = data.state;
+    localStorage.setItem("pokerArenaSession", sessionId);
+    render();
+  } catch (error) {
+    alert(`Could not start the table: ${error.message}`);
+  }
 }
 
 async function resumeSession() {
@@ -176,15 +204,68 @@ function newSession() {
   render();
 }
 
+async function startFreshGame() {
+  const name = gameState?.players?.[0]?.isHuman ? gameState.players[0].name : "You";
+  await startSession(name, [...selectedBots], humanPlaying);
+}
+
 // ---------------------------------------------------------------- play view
 
 function seatPositions(seat, count) {
-  // Seat 0 (you) at the bottom; the bots spread around the oval.
-  if (seat === 0) return [50, 92];
-  const remaining = count - 1;
-  const t = remaining === 1 ? 0.5 : (seat - 1) / (remaining - 1);
-  const angle = ((-90 + t * 180) * Math.PI) / 180;
-  return [50 + 42 * Math.cos(angle), 50 - 42 * Math.sin(angle)];
+  // Seat 0 (you) sits at the bottom centre. The other seats are spread around
+  // the oval, leaving a gap at the bottom so no bot ever covers your cards.
+  if (count <= 1) return [50, 50];
+  if (seat === 0) return [50, 88];
+  if (count === 2) return [50, 12];
+  const others = count - 1;
+  const gap = Math.min(40, 180 / others);
+  const span = 360 - 2 * gap;
+  const t = others === 1 ? 0.5 : (seat - 1) / (others - 1);
+  const theta = ((90 + gap + t * span) * Math.PI) / 180;
+  const rx = 42;
+  const ry = 36;
+  return [50 + rx * Math.cos(theta), 50 + ry * Math.sin(theta)];
+}
+
+function setupView() {
+  const chosen = readChosenBots();
+  if (chosen && chosen.length) {
+    selectedBots = new Set(chosen);
+    const names = chosen.map((key) => PLAYABLE_NAMES[key] || key);
+    const countEl = h("span", {}, String(names.length + (humanPlaying ? 1 : 0)));
+    const humanCheck = h("label", { class: "botcheck" },
+      h("input", { type: "checkbox", checked: humanPlaying, onchange: (e) => {
+        humanPlaying = e.target.checked;
+        countEl.textContent = String(names.length + (humanPlaying ? 1 : 0));
+      } }),
+      " I'm playing",
+    );
+    return h("div", { class: "card" },
+      h("h2", {}, "Ready to play?"),
+      h("p", {}, `You picked ${names.length} bot${names.length === 1 ? "" : "s"}: ${names.join(", ")}.`),
+      h("p", {}, ["Do you want to play a ", countEl, "-handed table?"]),
+      h("div", { class: "botchecks" }, humanCheck),
+      h("div", { class: "actions" },
+        h("button", { class: "primary", onclick: () => startSession("You", chosen, humanPlaying) }, "Yes, start the game"),
+        h("button", { class: "ghost", onclick: () => { location.hash = "#/teams"; } }, "Change models"),
+        h("button", { class: "ghost", onclick: () => startSession("Spectator", chosen, false) }, "No, just watch"),
+      ),
+      h("p", { class: "muted small" }, "Your session is kept in the worker's database, so you can close the tab and come back."),
+    );
+  }
+
+  return h("div", { class: "card" },
+    h("h2", {}, "Pick your opponents"),
+    h("p", {}, "First choose up to six bots on the Teams page, then press Continue. The five playable bots are the ones that run in your browser."),
+    h("div", { class: "actions" },
+      h("button", { class: "primary", onclick: () => { location.hash = "#/teams"; } }, "Choose models on the Teams page"),
+      h("button", { class: "ghost", onclick: () => {
+        localStorage.setItem("pokerArenaBots", JSON.stringify(PLAYABLE_KEYS));
+        selectedBots = new Set(PLAYABLE_KEYS);
+        render();
+      } }, "Use the classic five"),
+    ),
+  );
 }
 
 function playView() {
@@ -195,58 +276,24 @@ function playView() {
     const resume = h("div", { class: "card" }, "Loading your table — ");
     page.append(resume);
     resumeSession().then((ok) => {
-      if (ok) {
-        render();
-      } else {
-        const countEl = h("span", {}, "0");
-        const selected = new Set();
-        const botChecksContainer = h("div", { class: "botchecks" });
-        api("/api/teams").then((data) => {
-          const available = data.availableTeams || [];
-          for (const key of available) {
-            const label = h("label", { class: "botcheck" },
-              h("input", { type: "checkbox", checked: true, onchange: (e) => {
-                if (e.target.checked) selected.add(key);
-                else selected.delete(key);
-                countEl.textContent = String((humanPlaying ? 1 : 0) + selected.size);
-              } }),
-              ` ${key}`,
-            );
-            selected.add(key);
-            botChecksContainer.append(label);
-          }
-          countEl.textContent = String((humanPlaying ? 1 : 0) + selected.size);
-        }).catch(() => {});
-        const humanCheck = h("label", { class: "botcheck" },
-          h("input", { type: "checkbox", checked: true, onchange: (e) => {
-            humanPlaying = e.target.checked;
-            countEl.textContent = String((humanPlaying ? 1 : 0) + selected.size);
-          } }),
-          " I'm playing",
-        );
-        selectedBots = selected;
-        page.replaceChildren(
-          h("div", { class: "card" }, h("h2", {}, "Take a seat"),
-            h("p", {}, ["You are at a ", countEl, "-handed table. Choose the bots you want to play against."]),
-            h("div", { class: "botchecks" }, humanCheck, botChecksContainer),
-            h("p", { class: "muted small" }, "Pick up to six bots. Seven players max. Uncheck \"I'm playing\" to watch the bots play each other."),
-            h("div", { class: "actions" },
-              h("input", { id: "name", type: "text", value: "You", maxlength: "20" }),
-              h("button", { class: "primary", onclick: () => {
-                selectedBots = selected;
-                startSession(document.getElementById("name").value, [...selected]);
-              } }, "Start playing"),
-            ),
-            h("p", { class: "muted small" }, "Your session is kept in the worker's database, so you can close the tab and come back."),
-          )
-        );
-      }
+      if (ok) render();
+      else resume.replaceWith(setupView());
     });
     return page;
   }
 
   const state = gameState;
   const hand = state.hand;
+
+  // Always available, in every state of the game.
+  const seatNames = (state.players || []).map((p) => p.name).join(", ");
+  page.append(
+    h("div", { class: "controls" },
+      h("button", { class: "primary", onclick: startFreshGame }, "Start a new game"),
+      h("button", { class: "ghost", onclick: () => { location.hash = "#/teams"; } }, "Change opponents"),
+      h("span", { class: "muted small" }, `${state.players?.length || 0} seats · ${seatNames}`),
+    ),
+  );
 
   if (!hand) {
     page.append(
@@ -410,66 +457,90 @@ function verdictText(m) {
   return m.verdict === "a" ? `${m.a} won` : `${m.b} won`;
 }
 
+function matrixTable(matrix, names, caption) {
+  const header = h("tr", {}, h("th", {}, "Team"), names.map((n) => h("th", {}, n)));
+  const rows = names.map((me) =>
+    h("tr", {},
+      h("td", {}, h("a", { href: `#/team/${encodeURIComponent(me)}` }, me)),
+      names.map((other) => {
+        if (other === me) return h("td", { class: "diag" }, "—");
+        const cell = matrix[me]?.[other];
+        if (!cell) return h("td", { class: "muted" }, "—");
+        const value = cell.mean_bb;
+        return h("td", { class: `num ${value > 0 ? "pos" : value < 0 ? "neg" : ""}` },
+          fmtBB(value), h("br"),
+          h("span", { class: "muted small" }, `± ${cell.ci95_bb == null ? "—" : cell.ci95_bb.toFixed(1)}`));
+      }),
+    ),
+  );
+  return h("div", { class: "card" },
+    caption ? h("p", { class: "muted small" }, caption) : null,
+    h("div", { class: "tablewrap" },
+      h("table", { class: "tbl matrix" }, h("thead", {}, header), h("tbody", {}, rows)),
+    ),
+  );
+}
+
 function matrixView() {
   const page = h("div", { class: "page" });
   page.append(h("h1", {}, "Head-to-head"));
   loadTournament().then((data) => {
+    const ours = data.ourTournament;
+    if (ours && ours.teams?.length && ours.matrix) {
+      const names = ours.teams.map((t) => t.team);
+      page.append(h("h2", {}, "Our round robin"));
+      page.append(matrixTable(
+        ours.matrix,
+        names,
+        `All ${names.length} models whose files we have, ${ours.deals} deals each. The row team's bb/100 against the column team.`,
+      ));
+      const rows = ours.teams.map((t) =>
+        h("tr", {},
+          h("td", { class: "num" }, String(t.rank)),
+          h("td", {}, h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team)),
+          h("td", { class: `num ${t.score > 0 ? "pos" : t.score < 0 ? "neg" : ""}` }, fmtBB(t.score)),
+          h("td", { class: "num muted" }, t.ci95 == null ? "—" : `± ${t.ci95.toFixed(1)}`),
+          h("td", { class: "num" }, `${t.wins}–${t.draws}–${t.losses}`),
+          h("td", { class: "num muted" }, String(t.samples ?? "")),
+        ),
+      );
+      page.append(h("h2", {}, "Standings"));
+      page.append(
+        h("div", { class: "card tablewrap" },
+          h("table", { class: "tbl" },
+            h("thead", {}, h("tr", {},
+              h("th", { class: "num" }, "#"), h("th", {}, "Team"),
+              h("th", { class: "num" }, "bb/100"), h("th", { class: "num" }, "95% ±"),
+              h("th", { class: "num" }, "W–D–L"), h("th", { class: "num" }, "Deals"),
+            )),
+            h("tbody", {}, rows),
+          ),
+        ),
+      );
+    } else {
+      page.append(h("div", { class: "card empty" }, "Our round robin has not been run yet."));
+    }
+
     const available = new Set(data.availableTeams || []);
     const allTeams = (data.allTeams?.teams || []).filter((t) => available.has(t.team));
     const allMatrix = data.allTeams?.matrix || {};
     if (allTeams.length) {
       const names = allTeams.map((t) => t.team).sort();
-      const header = h("tr", {}, h("th", {}, "Team"), names.map((n) => h("th", {}, n)));
-      const rows = names.map((me) =>
-        h("tr", {},
-          h("td", {}, h("a", { href: `#/team/${encodeURIComponent(me)}` }, me)),
-          names.map((other) => {
-            if (other === me) return h("td", { class: "diag" }, "—");
-            const cell = allMatrix[me]?.[other];
-            if (!cell) return h("td", { class: "muted" }, "—");
-            const value = cell.mean_bb;
-            return h("td", { class: `num ${value > 0 ? "pos" : value < 0 ? "neg" : ""}` },
-              `${fmtBB(value)}`, h("br"), h("span", { class: "muted small" }, `± ${cell.ci95_bb == null ? "—" : cell.ci95_bb.toFixed(1)}`));
-          }),
-        ),
-      );
-      page.append(
-        h("div", { class: "card" },
-          h("p", {}, `Head-to-head for the ${names.length} available models (mean big blinds won per 100 hands by the row team against the column team).`),
-          h("div", { class: "tablewrap" },
-            h("table", { class: "tbl matrix" }, h("thead", {}, header), h("tbody", {}, rows)),
-          ),
-        ),
-      );
+      page.append(h("details", { class: "card" },
+        h("summary", {}, `Official competition matrix (${names.length} teams)`),
+        matrixTable(allMatrix, names, "Results from the live competition site, for reference."),
+      ));
     }
+
     const board = data.tournament?.groups?.[0]?.board;
     const teams = board?.teams || [];
     const matrix = board?.matrix || {};
     if (teams.length) {
       const names = teams.map((t) => t.team);
-      const header = h("tr", {}, h("th", {}, "Team"), names.map((n) => h("th", {}, n)));
-      const rows = names.map((me) =>
-        h("tr", {},
-          h("td", {}, h("a", { href: `#/team/${encodeURIComponent(me)}` }, me)),
-          names.map((other) => {
-            if (other === me) return h("td", { class: "diag" }, "—");
-            const cell = matrix[me]?.[other];
-            if (!cell) return h("td", { class: "muted" }, "—");
-            const value = cell.mean_bb;
-            return h("td", { class: `num ${value > 0 ? "pos" : value < 0 ? "neg" : ""}` },
-              `${fmtBB(value)}`, h("br"), h("span", { class: "muted small" }, `± ${cell.ci95_bb == null ? "—" : cell.ci95_bb.toFixed(1)}`));
-          }),
-        ),
-      );
-      page.append(
-        h("div", { class: "card" },
-          h("h2", {}, "My bots"),
-          h("p", {}, "Head-to-head for the five fork bots."),
-          h("div", { class: "tablewrap" },
-            h("table", { class: "tbl matrix" }, h("thead", {}, header), h("tbody", {}, rows)),
-          ),
-        ),
-      );
+      page.append(h("details", { class: "card" },
+        h("summary", {}, "My five-bot round robin"),
+        matrixTable(matrix, names, "The five fork bots, from the precomputed five-bot round robin."),
+      ));
     }
   }).catch((error) => {
     page.append(h("div", { class: "card error" }, `Could not load the matrix: ${error.message}`));
@@ -481,23 +552,40 @@ function matchesView() {
   const page = h("div", { class: "page" });
   page.append(h("h1", {}, "Matches"));
   loadTournament().then((data) => {
-    const matches = data.matches || [];
+    const matches = (data.matches || []).slice().sort((a, b) => (b.finished_at || 0) - (a.finished_at || 0));
     if (!matches.length) {
       page.append(h("div", { class: "card empty" }, "No matches yet."));
       return;
     }
-    const rows = matches.map((m) =>
-      h("tr", {},
-        h("td", {}, `${m.a} vs ${m.b}`),
-        h("td", {}, verdictText(m)),
-        h("td", { class: `num ${m.mean_bb > 0 ? "pos" : m.mean_bb < 0 ? "neg" : ""}` }, fmtBB(m.mean_bb)),
-        h("td", { class: "num muted" }, m.ci95_bb == null ? "—" : `± ${m.ci95_bb.toFixed(1)}`),
-        h("td", { class: "num muted" }, `${m.hands}`),
-        h("td", { class: "num muted" }, `${m.faults_a || 0}/${m.faults_b || 0}`),
-        h("td", { class: "muted small nowrap" }, fmtTime(m.finished_at)),
-      ),
-    );
+    const filter = h("input", { type: "search", placeholder: "Filter by team…" });
+    const count = h("span", { class: "muted small" }, `${matches.length} matches`);
+    const tbody = h("tbody", {});
+    const draw = () => {
+      const needle = filter.value.trim().toLowerCase();
+      const list = needle
+        ? matches.filter((m) => m.a.toLowerCase().includes(needle) || m.b.toLowerCase().includes(needle))
+        : matches;
+      const shown = list.slice(0, 300);
+      tbody.replaceChildren(...shown.map((m) =>
+        h("tr", {},
+          h("td", {}, `${m.a} vs ${m.b}`),
+          h("td", {}, verdictText(m)),
+          h("td", { class: `num ${m.mean_bb > 0 ? "pos" : m.mean_bb < 0 ? "neg" : ""}` }, fmtBB(m.mean_bb)),
+          h("td", { class: "num muted" }, m.ci95_bb == null ? "—" : `± ${m.ci95_bb.toFixed(1)}`),
+          h("td", { class: "num muted" }, `${m.hands}`),
+          h("td", { class: "num muted" }, `${m.faults_a || 0}/${m.faults_b || 0}`),
+          h("td", { class: "muted small nowrap" }, fmtTime(m.finished_at)),
+        ),
+      ));
+      count.textContent = `${list.length} matches${list.length > shown.length ? ` (showing first ${shown.length}; use the filter)` : ""}`;
+    };
+    filter.addEventListener("input", draw);
+    draw();
     page.append(
+      h("div", { class: "controls" },
+        filter, count,
+        h("a", { href: "/data/our-tournament.json", download: "our-tournament.json", class: "small" }, "Download JSON"),
+      ),
       h("div", { class: "card" },
         h("div", { class: "tablewrap" },
           h("table", { class: "tbl" },
@@ -506,7 +594,7 @@ function matchesView() {
               h("th", { class: "num" }, "95% ±"), h("th", { class: "num" }, "Hands"),
               h("th", { class: "num" }, "Faults"), h("th", {}, "When"),
             )),
-            h("tbody", {}, rows),
+            tbody,
           ),
         ),
       ),
@@ -549,6 +637,10 @@ function leaderboardTable(teams, samplesFor, availableSet = null, repoMap = null
   );
 }
 
+function teamKey(name) {
+  return String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 function teamsView() {
   const page = h("div", { class: "page" });
   page.append(h("h1", {}, "Teams"));
@@ -560,14 +652,71 @@ function teamsView() {
     }
     const myBoard = data.tournament?.groups?.[0]?.board;
     const myTeams = myBoard?.teams || [];
-    page.append(h("h2", {}, "My bots"));
-    page.append(h("p", { class: "muted small" }, "The five A-E models from the poker_bot fork, renamed by style. Score from the precomputed five-bot round robin."));
-    if (myTeams.length) page.append(leaderboardTable(myTeams, (t) => (t.hands ? t.hands / 2 : 0), new Set(myTeams.map((t) => t.team))));
+
+    // The floating Continue button belongs to the playable-bot picker.
+    const selected = new Set(readChosenBots() || PLAYABLE_KEYS);
+    const floatingBtn = h("button", { class: "floating-btn", onclick: () => {
+      const chosen = [...selected].slice(0, MAX_SELECTED);
+      localStorage.setItem("pokerArenaBots", JSON.stringify(chosen));
+      selectedBots = new Set(chosen);
+      // Coming from the Teams page starts a fresh table with the new picks.
+      sessionId = null;
+      gameState = null;
+      localStorage.removeItem("pokerArenaSession");
+      location.hash = "#/play";
+    } });
+    const updateFloating = () => {
+      floatingBtn.textContent = `Continue (${selected.size} selected)`;
+      floatingBtn.disabled = selected.size === 0;
+    };
+    updateFloating();
+
+    page.append(h("h2", {}, "Playable bots"));
+    page.append(h("p", { class: "muted small" },
+      "Pick up to six opponents for your table. These five bots run in the browser; the competition teams below are Python models that run in the offline tournament."));
+    if (myTeams.length) {
+      const playableRows = myTeams.map((t) => {
+        const key = teamKey(t.team);
+        const checkbox = h("input", { type: "checkbox", checked: selected.has(key), onchange: (e) => {
+          if (e.target.checked) {
+            if (selected.size >= MAX_SELECTED) {
+              e.target.checked = false;
+              return;
+            }
+            selected.add(key);
+          } else {
+            selected.delete(key);
+          }
+          updateFloating();
+        } });
+        return h("tr", {},
+          h("td", {}, checkbox),
+          h("td", {}, h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team)),
+          h("td", {}, t.plan ? `Plan ${t.plan}` : "—"),
+          h("td", { class: "num" }, String(t.tier ?? "—")),
+          h("td", { class: `num ${t.score > 0 ? "pos" : t.score < 0 ? "neg" : ""}` }, fmtBB(t.score)),
+          h("td", { class: "num muted" }, t.ci95 == null ? "—" : `± ${t.ci95.toFixed(1)}`),
+        );
+      });
+      page.append(
+        h("div", { class: "card tablewrap" },
+          h("table", { class: "tbl" },
+            h("thead", {}, h("tr", {},
+              h("th", {}, "Pick"), h("th", {}, "Bot"), h("th", {}, "Plan"),
+              h("th", { class: "num" }, "Tier"), h("th", { class: "num" }, "bb/100"),
+              h("th", { class: "num" }, "95% ±"),
+            )),
+            h("tbody", {}, playableRows),
+          ),
+        ),
+      );
+    }
+
     const allTeams = data.allTeams?.teams || [];
     page.append(h("h2", {}, `All competition bots (${allTeams.length})`));
-    page.append(h("p", { class: "muted small" }, "Every team from the GreatUniHack 2026 poker bot competition, Group A. Std is the standard deviation of the per-deal bb/100, recovered from the 95% interval. ✓ = model files downloaded, ✗ = not yet. Team name links to the GitHub repository when found."));
+    page.append(h("p", { class: "muted small" },
+      "Every team from the GreatUniHack 2026 poker bot competition. ✓ = model files downloaded, ✗ = not found yet. Each team name links to the GitHub repository where its model was found."));
     if (allTeams.length) {
-      const selected = new Set(JSON.parse(localStorage.getItem("pokerArenaBots") || "[]"));
       const rows = allTeams.map((t) => {
         const std = stdFromCi(t.ci95, t.samples || 0);
         const isAvailable = available.has(t.team);
@@ -575,50 +724,35 @@ function teamsView() {
         const teamCell = repo
           ? h("a", { href: repo, target: "_blank", rel: "noopener" }, t.team)
           : h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team);
-        const checkbox = h("input", { type: "checkbox", checked: selected.has(t.team), onchange: (e) => {
-          if (e.target.checked) selected.add(t.team);
-          else selected.delete(t.team);
-          floatingBtn.textContent = `Continue (${selected.size} selected)`;
-        } });
         return h("tr", {},
-          h("td", { class: "num" }, h("input", { type: "checkbox", checked: selected.has(t.team), onchange: (e) => {
-            if (e.target.checked) selected.add(t.team);
-            else selected.delete(t.team);
-            floatingBtn.textContent = `Continue (${selected.size} selected)`;
-          } })),
           h("td", { class: "num" }, t.rank == null ? "—" : String(t.rank)),
           h("td", {}, teamCell,
-            isAvailable === true ? h("span", { class: "badge green" }, " ✓") : isAvailable === false ? h("span", { class: "badge red" }, " ✗") : null),
+            isAvailable ? h("span", { class: "badge green" }, " ✓") : h("span", { class: "badge red" }, " ✗")),
           h("td", { class: `num ${t.score > 0 ? "pos" : t.score < 0 ? "neg" : ""}` }, fmtBB(t.score)),
           h("td", { class: "num muted" }, t.ci95 == null ? "—" : `± ${t.ci95.toFixed(1)}`),
           h("td", { class: "num muted" }, std == null ? "—" : std.toFixed(1)),
           h("td", { class: "num" }, `${t.wins ?? 0}–${t.draws ?? 0}–${t.losses ?? 0}`),
           h("td", { class: "num muted" }, String(t.faults ?? 0)),
+          h("td", {}, repo ? h("a", { href: repo, target: "_blank", rel: "noopener" }, "repo") : h("span", { class: "muted" }, "—")),
         );
       });
-      const floatingBtn = h("button", { class: "floating-btn", onclick: () => {
-        const chosen = [...selected].slice(0, 6);
-        localStorage.setItem("pokerArenaBots", JSON.stringify(chosen));
-        location.hash = "#/play";
-      } }, `Continue (0 selected)`);
       page.append(
         h("div", { class: "card tablewrap" },
           h("table", { class: "tbl" },
             h("thead", {}, h("tr", {},
-              h("th", {}, "Pick"), h("th", { class: "num" }, "#"), h("th", {}, "Team"),
+              h("th", { class: "num" }, "#"), h("th", {}, "Team"),
               h("th", { class: "num" }, "bb/100"), h("th", { class: "num" }, "95% ±"),
               h("th", { class: "num" }, "Std"), h("th", { class: "num" }, "W–D–L"),
-              h("th", { class: "num" }, "Faults"),
+              h("th", { class: "num" }, "Faults"), h("th", {}, "Model"),
             )),
             h("tbody", {}, rows),
           ),
         ),
       );
-      document.body.append(floatingBtn);
-      // Clean up on navigation
-      const cleanup = () => { floatingBtn.remove(); };
-      window.addEventListener("hashchange", cleanup, { once: true });
     }
+
+    document.body.append(floatingBtn);
+    window.addEventListener("hashchange", () => floatingBtn.remove(), { once: true });
   }).catch((error) => {
     page.append(h("div", { class: "card error" }, `Could not load teams: ${error.message}`));
   });
@@ -630,20 +764,29 @@ function teamView(name) {
   page.append(h("h1", {}, name));
   loadTournament().then((data) => {
     const allTeams = data.allTeams?.teams || [];
-    const team = (data.teams?.teams || []).find((t) => t.team === name)
-      || allTeams.find((t) => t.team === name);
+    const repoMap = {};
+    for (const r of (data.teamsData || [])) {
+      if (r.github_repo) repoMap[r.team] = r.github_repo;
+    }
+    const repo = repoMap[name] || repoMap[teamKey(name)];
+    const wantedKey = teamKey(name);
+    const team = (data.teams?.teams || []).find((t) => teamKey(t.team) === wantedKey)
+      || allTeams.find((t) => teamKey(t.team) === wantedKey);
     if (team) {
       page.append(
         h("div", { class: "card teamcard" },
           h("p", {}, team.tagline || ""),
           h("p", { class: "muted" }, team.description || ""),
+          repo ? h("p", {}, ["Model found in ", h("a", { href: repo, target: "_blank", rel: "noopener" }, repo.replace(/^https:\/\/github\.com\//, ""))]) : null,
           team.plan ? h("p", {}, [h("span", { class: "badge" }, `Plan ${team.plan}`), " ", h("span", { class: "badge" }, `Tier ${team.tier}`)]) : null,
         ),
       );
     }
     const board = data.tournament?.groups?.[0]?.board;
-    const row = board?.teams?.find((t) => t.team === name)
-      || allTeams.find((t) => t.team === name);
+    const ourRow = (data.ourTournament?.teams || []).find((t) => t.team === name || teamKey(t.team) === wantedKey);
+    const row = ourRow
+      || board?.teams?.find((t) => teamKey(t.team) === wantedKey)
+      || allTeams.find((t) => teamKey(t.team) === wantedKey);
     if (row) {
       const samples = row.samples || (row.hands ? row.hands / 2 : 0);
       const std = stdFromCi(row.ci95, samples);
@@ -660,7 +803,7 @@ function teamView(name) {
         ),
       );
     }
-    const matches = (data.matches || []).filter((m) => m.a === name || m.b === name);
+    const matches = (data.matches || []).filter((m) => teamKey(m.a) === wantedKey || teamKey(m.b) === wantedKey);
     if (matches.length) {
       const rows = matches.map((m) =>
         h("tr", {},
@@ -693,19 +836,20 @@ function aboutView() {
     h("h1", {}, "About Poker Arena"),
     h("div", { class: "card" },
       h("p", {}, "This is a playable version of the poker bot competition. You sit at a six-handed table with the five bots from the altcar/poker_bot fork, renamed by style: Conservative, Workhorse, Adaptive, Mixed and Aggressive."),
+      h("p", {}, "The Teams page lists every competition team. Each name links to the GitHub repository where the team's model.py and pickle were found, and the files are copied into all-teams/. Those competition bots are Python models: they play the offline round robin on the Head-to-head and Matches pages, while the five fork bots are the ones that run live in your browser."),
       h("p", {}, "The engine and the bots are a line-for-line JavaScript port of the Python code in the fork. The port is verified hand-for-hand against the real Python engine: the Monte-Carlo draws use Python's own MT19937 and random.sample, so a given seed and deck produce the same actions."),
       h("p", {}, "The original Python files are in python/ (including the submitted goldman-stanley.pkl). The tournament data is precomputed with the Python engine."),
     ),
     h("div", { class: "card" },
       h("h2", {}, "API"),
       h("dl", { class: "kv" },
-        h("dt", {}, "POST /api/session"), h("dd", {}, "Start a table. Body: { humanName, stack, smallBlind, bigBlind, seed }."),
+        h("dt", {}, "POST /api/session"), h("dd", {}, "Start a table. Body: { humanName, botKeys, humanPlaying, stack, smallBlind, bigBlind, seed }."),
         h("dt", {}, "GET /api/session/:id"), h("dd", {}, "Current state."),
         h("dt", {}, "POST /api/session/:id/action"), h("dd", {}, 'Body: { kind: "fold" | "call" | "raise", amount }.'),
         h("dt", {}, "POST /api/session/:id/next"), h("dd", {}, "Deal the next hand."),
         h("dt", {}, "POST /api/decision"), h("dd", {}, "Ask one bot for its move. Body: { bot, hole, playerId, state, actions }."),
-        h("dt", {}, "GET /api/tournament"), h("dd", {}, "Standings, matrix, matches and team metadata."),
-        h("dt", {}, "GET /api/teams.csv"), h("dd", {}, "The teams with their GitHub repositories."),
+        h("dt", {}, "GET /api/tournament"), h("dd", {}, "Our round robin (standings, matrix, matches), the official competition data, and team metadata."),
+        h("dt", {}, "GET /api/teams.csv"), h("dd", {}, "The teams with the GitHub repositories where their models were found."),
       ),
     ),
     h("div", { class: "card" },

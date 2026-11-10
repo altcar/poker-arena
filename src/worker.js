@@ -17,6 +17,7 @@ import { GameState } from "./game_state.js";
 import { Card } from "./card_utils.js";
 import { PlayerAction } from "./player_action.js";
 import { tournament, matches as staticMatches, teams as staticTeams } from "./tournament_data.js";
+import { ourTournament } from "./our_tournament_data.js";
 import { teamsData } from "./teams_data.js";
 import { allTeams } from "./all_teams_data.js";
 import { availableTeams } from "./available_teams_data.js";
@@ -155,15 +156,19 @@ async function handleApi(request, env, url) {
   }
 
   if (method === "GET" && path === "/api/tournament") {
-    const recorded = await env.DB.prepare(
-      "SELECT * FROM matches ORDER BY finished_at DESC"
-    ).all();
     return json({
       tournament,
       allTeams,
       availableTeams: availableTeams.teams,
-      matches: [...recorded.results, ...staticMatches],
+      // Our own round robin (all bots whose files we have) is the default;
+      // the official competition matches remain available for reference.
+      matches: ourTournament.matches && ourTournament.matches.length
+        ? ourTournament.matches
+        : staticMatches,
+      ourTournament,
+      officialMatches: staticMatches,
       teams: staticTeams,
+      teamsData,
       bots: BOTS.map((b) => ({
         key: b.key,
         name: b.name,
@@ -180,12 +185,10 @@ async function handleApi(request, env, url) {
   }
 
   if (method === "GET" && path === "/api/teams.csv") {
-    await ensureTeamsSeeded(env);
-    const rows = await env.DB.prepare("SELECT * FROM teams ORDER BY team").all();
     const header = "team,plan,tier,github_repo,github_url,site_url";
-    const lines = rows.results.map((r) =>
-      [r.team, r.plan || "", r.tier || "", r.github_repo || "", r.github_url || "", r.site_url || ""]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+    const lines = teamsData.map((team) =>
+      [team.team, team.plan || "", team.tier || "", team.github_repo || "", team.search_url || "", team.site_url || ""]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
         .join(",")
     );
     return new Response([header, ...lines].join("\n"), {
@@ -223,8 +226,7 @@ async function handleApi(request, env, url) {
   }
 
   if (method === "GET" && path === "/api/matches") {
-    const rows = await env.DB.prepare("SELECT * FROM matches ORDER BY finished_at DESC").all();
-    return json({ matches: rows.results });
+    return json({ matches: ourTournament.matches || [] });
   }
 
   return json({ error: "not found" }, 404);

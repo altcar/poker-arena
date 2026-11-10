@@ -245,6 +245,7 @@ table.tbl {
 }
 .seat.turn .box { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(240, 183, 47, 0.4); }
 .seat.you .box { border-color: var(--blue); }
+.seat.you { z-index: 5; }
 
 .seat.s0 { left: 50%; top: 92%; }
 .seat.s1 { left: 92%; top: 68%; }
@@ -324,6 +325,7 @@ pre {
   border-radius: 999px;
 }
 .floating-btn:hover { transform: translateY(-2px); }
+.floating-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 .botchecks {
   display: flex;
@@ -346,7 +348,11 @@ pre {
 .botcheck:hover { border-color: var(--accent); }
 
 @media (max-width: 720px) {
-  .seat { width: 110px; }
+  .table { aspect-ratio: 4 / 3; }
+  .seat { width: 76px; }
+  .seat .box { padding: 0.25rem 0.3rem; }
+  .seat .name { font-size: 0.72rem; }
+  .seat .stack, .seat .bet { font-size: 0.68rem; }
   .cardface { width: 1.6rem; height: 2.2rem; font-size: 0.75rem; }
   main { padding: 1rem; }
 }

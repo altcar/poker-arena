@@ -11,3 +11,16 @@ __pycache__/
 *.pyc
 .DS_Store
 .tmp/
+data/*.log
+data/*.err
+data/shard_*
+data/extra_*
+data/tournament_shard_*.json
+data/tournament_extra_*.json
+data/test_results*.json
+data/fork_probe.json
+data/fork_mapping.json
+data/missing-search-log.txt
+data/model-load-test.txt
+data/pkl-load-test.txt
+data/sync-log.txt

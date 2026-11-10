@@ -71,15 +71,16 @@ Both methods are now set up for this project:
 
 | Route | Purpose |
 |---|---|
-| `POST /api/session` | Start a 6-player table. Body: `{ humanName, stack, smallBlind, bigBlind, seed }`. |
+| `POST /api/session` | Start a table. Body: `{ humanName, botKeys, humanPlaying, stack, smallBlind, bigBlind, seed }`. |
 | `GET /api/session/:id` | Current state. |
 | `POST /api/session/:id/action` | `{ kind: "fold" \| "call" \| "raise", amount }`. |
 | `POST /api/session/:id/next` | Deal the next hand. |
 | `POST /api/session/:id/rebuy` | Reset every stack. |
 | `POST /api/decision` | Ask one bot for its move. Body: `{ bot, hole, playerId, state, actions }`. |
-| `GET /api/tournament` | Standings, matrix, matches and team metadata. |
-| `GET /api/teams` | Team metadata. |
-| `GET /api/teams.csv` | The live competition's teams with their GitHub repositories. |
+| `GET /api/tournament` | Our round robin (standings, matrix, matches), the official competition data, and team metadata. |
+| `GET /api/teams` | Team metadata and the downloaded competition teams. |
+| `GET /api/teams.csv` | The teams with the GitHub repositories where their models were found. |
+| `GET /api/matches` | Our round-robin matches. |
 | `POST /api/matches` | Record a match result. |
 
 The game is stateful: the worker stores the whole `Game` (stacks, button,
@@ -108,39 +109,53 @@ The exact match works because the port uses Python's own MT19937 and
 `random.sample` (`src/pyrandom.js`), so the Monte-Carlo draws are the same as
 the Python model's for a given seed and deck.
 
-## The teams CSV
+## Competition teams and their models
 
-`scripts/make_teams_csv.mjs` reads the team names from the live competition
-site (`https://poker-arena-site.vercel.app/data/teams.json`), searches GitHub
-for each one with the `gh` CLI, and writes:
+Every team forked the official
+[`Manchester-AI-Society/poker_bot`](https://github.com/Manchester-AI-Society/poker_bot)
+repository, so the fork list is the reliable way to find a team's model (a
+team-name search alone matches unrelated repositories). The sync script:
 
-- `data/all-teams.csv` — team, site URL, search URL, GitHub repository, description
-- `src/teams_data.js` — the same rows, served by `GET /api/teams.csv`
+1. lists the 60 forks of the official repository;
+2. maps each fork to a team from its pickle filename (e.g. `apex_poker.pkl`),
+   its repository/owner name, or a manual alias;
+3. clones the fork and keeps the pickle plus the `.py` files it imports;
+4. falls back to `gh search repos <team>` for teams that did not fork;
+5. writes `data/team_files.csv` and `data/team_repos_resolved.json`.
 
 ```sh
-npm run csv
+node scripts/sync_team_files.mjs     # download model.py + pkl into all-teams/
+node scripts/finalize_team_files.mjs # rebuild team_files.csv
+node scripts/make_teams_data.mjs     # verified repo links in src/teams_data.js
 ```
 
-The competition is over, so the file is frozen.
-
-## The all-teams folder
+`data/team_files.csv` has one row per competition team: status, repository,
+`model.py`, pickle, and the other files. 57 of the 68 teams were found. The
+other 11 (e.g. `ayo`, `byteclub`, `fh2`) did not publish a discoverable
+repository; `data/missing_candidates.json` records the search results.
 
 `all-teams/<team>/` holds the files needed to run each bot: the `.pkl` plus
 the `.py` files it imports (the same set `submit.py` lists for a submission).
-The five bots in this fork are created by `scripts/seed_my_bots.py`; the
-competition teams are downloaded by `scripts/download_team_files.mjs`, which
-finds each team's public repository with GitHub search, clones it, and copies
-only the required files:
+The five bots in this fork are created by `scripts/seed_my_bots.py`.
+
+## Our round robin
+
+The head-to-head and matches pages use our own round robin, not the live
+competition's matrix. It is run with the real Python engine over every model
+whose files we have, 10 duplicate deals per pairing with the seats swapped:
 
 ```sh
-.venv/Scripts/python.exe scripts/seed_my_bots.py
-node scripts/download_team_files.mjs
+# 4 shards in parallel (PowerShell)
+0..3 | ForEach-Object {
+  Start-Process .venv/Scripts/python.exe -ArgumentList "scripts/run_tournament.py","--deals","10","--shard","$_/4"
+}
+.venv/Scripts/python.exe scripts/merge_tournament.py
+node scripts/make_our_tournament.mjs
 ```
 
-`data/all-teams-report.json` records which teams were found and which were
-not. The competition's submission form (which held the repository links) is
-private, so a few teams cannot be found by search; drop their repository URL
-into `data/team_repos.json` and re-run the script to add them.
+The results are in `data/tournament_results.json` (matches, per-deal values,
+standings and the two-way matrix) and are served from
+`src/our_tournament_data.js` at `GET /api/tournament`.
 
 ## Project layout
 
@@ -156,7 +171,7 @@ src/               the JavaScript engine, bots, game and worker
   bots.js          the five renamed bots
   game.js          the 6-player table (serialisable)
   worker.js        the Worker: static assets + API
-public/            the single-page app (Play, Tournament, Teams, Matrix, Matches, About)
+public/            the single-page app (Play, Teams, Head-to-head, Matches, About)
   data/            the precomputed tournament and the live competition's board
 all-teams/         each bot's .pkl and the .py files it needs
 python/            the original Python source, including the pickle and the A-E variants
@@ -169,8 +184,11 @@ data/              generated dumps, the CSV and the live competition data
 
 - The Python engine is not required to run the web app; it is used to
   verify the port and to precompute the tournament.
-- The tournament data in `public/data/` is generated by
-  `scripts/make_tournament.py` (100 duplicate deals per pairing, seats
-  swapped) using the real Python engine.
+- The five-bot board in `public/data/` is generated by
+  `scripts/make_tournament.py` (duplicate deals, seats swapped) using the real
+  Python engine. Our all-model round robin is generated by
+  `scripts/make_our_tournament.mjs`.
 - The five bots are the A-E variants from commit `14bc9b9` of the fork; the
   submitted `goldman-stanley.pkl` is variant B.
+- Competition models are Python pickles: they play the offline round robin,
+  but only the five fork bots run live in the browser.
