@@ -149,7 +149,7 @@ export function playHand(models, deck, stacks, button = 0, smallBlind = 10, bigB
 
 // One hand, pausing whenever the human seat is to act.
 export class HandSession {
-  constructor(models, deck, stacks, button = 0, smallBlind = 10, bigBlind = 20, teams = null, humanId = 0) {
+  constructor(models, deck, stacks, button = 0, smallBlind = 10, bigBlind = 20, teams = null, humanId = null) {
     const count = models.length;
     if (stacks.length !== count) throw new Error(`${count} models for ${stacks.length} stacks`);
     if (deck.length < 2 * count + 5) {
@@ -218,7 +218,7 @@ export class HandSession {
         continue;
       }
       const p = this.state.to_act;
-      if (p === this.humanId) return "human";
+      if (this.humanId !== null && p === this.humanId) return "human";
       this._stepPlayer(p);
     }
     this._finish();
@@ -227,6 +227,7 @@ export class HandSession {
 
   humanAction(action) {
     if (this.result) throw new Error("the hand is over");
+    if (this.humanId === null) throw new Error("no human seat");
     this.state.validate_action(action);
     this._apply(action);
     return this.advance();

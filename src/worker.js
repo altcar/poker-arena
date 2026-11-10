@@ -19,6 +19,7 @@ import { PlayerAction } from "./player_action.js";
 import { tournament, matches as staticMatches, teams as staticTeams } from "./tournament_data.js";
 import { teamsData } from "./teams_data.js";
 import { allTeams } from "./all_teams_data.js";
+import { availableTeams } from "./available_teams_data.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -104,6 +105,7 @@ async function handleApi(request, env, url) {
     const game = new Game({
       humanName: typeof body.humanName === "string" ? body.humanName : "You",
       botKeys: Array.isArray(body.botKeys) && body.botKeys.length ? body.botKeys : undefined,
+      humanPlaying: body.humanPlaying !== false,
       stack: Number(body.stack) || 500,
       smallBlind: Number(body.smallBlind) || 10,
       bigBlind: Number(body.bigBlind) || 20,
@@ -159,6 +161,7 @@ async function handleApi(request, env, url) {
     return json({
       tournament,
       allTeams,
+      availableTeams: availableTeams.teams,
       matches: [...recorded.results, ...staticMatches],
       teams: staticTeams,
       bots: BOTS.map((b) => ({
@@ -173,7 +176,7 @@ async function handleApi(request, env, url) {
   }
 
   if (method === "GET" && path === "/api/teams") {
-    return json({ teams: staticTeams, bots: BOTS, allTeams });
+    return json({ teams: staticTeams, bots: BOTS, allTeams, availableTeams: availableTeams.teams });
   }
 
   if (method === "GET" && path === "/api/teams.csv") {

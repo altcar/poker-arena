@@ -114,6 +114,7 @@ function cardBack(small = false) {
 let sessionId = localStorage.getItem("pokerArenaSession") || null;
 let gameState = null;
 let selectedBots = new Set(["conservative", "workhorse", "adaptive", "mixed", "aggressive"]);
+let humanPlaying = true;
 const BOT_KEYS = ["conservative", "workhorse", "adaptive", "mixed", "aggressive"];
 const BOT_NAMES = {
   conservative: "Conservative",
@@ -126,7 +127,7 @@ const BOT_NAMES = {
 async function startSession(name) {
   const data = await api("/api/session", {
     method: "POST",
-    body: JSON.stringify({ humanName: name || "You", botKeys: [...selectedBots] }),
+    body: JSON.stringify({ humanName: humanPlaying ? (name || "You") : "Spectator", botKeys: [...selectedBots], humanPlaying }),
   });
   sessionId = data.sessionId;
   gameState = data.state;
@@ -198,6 +199,13 @@ function playView() {
         render();
       } else {
         const countEl = h("span", {}, "six");
+        const humanCheck = h("label", { class: "botcheck" },
+          h("input", { type: "checkbox", checked: true, onchange: (e) => {
+            humanPlaying = e.target.checked;
+            countEl.textContent = String((humanPlaying ? 1 : 0) + selectedBots.size);
+          } }),
+          " I'm playing",
+        );
         const botChecks = BOT_KEYS.map((key) =>
           h("label", { class: "botcheck" },
             h("input", {
@@ -206,7 +214,7 @@ function playView() {
               onchange: (e) => {
                 if (e.target.checked) selectedBots.add(key);
                 else selectedBots.delete(key);
-                countEl.textContent = String(1 + selectedBots.size);
+                countEl.textContent = String((humanPlaying ? 1 : 0) + selectedBots.size);
               },
             }),
             ` ${BOT_NAMES[key]}`,
@@ -214,8 +222,9 @@ function playView() {
         );
         page.replaceChildren(
           h("div", { class: "card" }, h("h2", {}, "Take a seat"),
-            h("p", {}, ["You are one player at a ", countEl, "-handed table. Choose the bots you want to play against."]),
-            h("div", { class: "botchecks" }, botChecks),
+            h("p", {}, ["You are at a ", countEl, "-handed table. Choose the bots you want to play against."]),
+            h("div", { class: "botchecks" }, humanCheck, botChecks),
+            h("p", { class: "muted small" }, "Pick up to six bots. Seven players max. Uncheck \"I'm playing\" to watch the bots play each other."),
             h("div", { class: "actions" },
               h("input", { id: "name", type: "text", value: "You", maxlength: "20" }),
               h("button", { class: "primary", onclick: () => startSession(document.getElementById("name").value) }, "Start playing"),
@@ -270,8 +279,8 @@ function playView() {
         h("div", { class: "box" },
           h("div", { class: "hole" }, hole),
           h("div", { class: "name" }, seat.name, state.hand.button === seat.seat ? h("span", { class: "dealer" }, "D") : null),
-          h("div", { class: "stack" }, fmtChips(seat.stack)),
-          h("div", { class: "bet" }, seat.bet ? `${fmtChips(seat.bet)}` : ""),
+          h("div", { class: "stack" }, `Stack ${fmtChips(seat.stack)}`),
+          h("div", { class: "bet" }, seat.bet ? `Bet ${fmtChips(seat.bet)}` : ""),
           h("div", { class: `status ${seat.folded ? "folded" : seat.status === "all_in" ? "all_in" : ""}` }, status),
         ),
       ),
@@ -445,36 +454,63 @@ function matrixView() {
   const page = h("div", { class: "page" });
   page.append(h("h1", {}, "Head-to-head"));
   loadTournament().then((data) => {
+    const available = new Set(data.availableTeams || []);
+    const allTeams = (data.allTeams?.teams || []).filter((t) => available.has(t.team));
+    const allMatrix = data.allTeams?.matrix || {};
+    if (allTeams.length) {
+      const names = allTeams.map((t) => t.team).sort();
+      const header = h("tr", {}, h("th", {}, "Team"), names.map((n) => h("th", {}, n)));
+      const rows = names.map((me) =>
+        h("tr", {},
+          h("td", {}, h("a", { href: `#/team/${encodeURIComponent(me)}` }, me)),
+          names.map((other) => {
+            if (other === me) return h("td", { class: "diag" }, "—");
+            const cell = allMatrix[me]?.[other];
+            if (!cell) return h("td", { class: "muted" }, "—");
+            const value = cell.mean_bb;
+            return h("td", { class: `num ${value > 0 ? "pos" : value < 0 ? "neg" : ""}` },
+              `${fmtBB(value)}`, h("br"), h("span", { class: "muted small" }, `± ${cell.ci95_bb == null ? "—" : cell.ci95_bb.toFixed(1)}`));
+          }),
+        ),
+      );
+      page.append(
+        h("div", { class: "card" },
+          h("p", {}, `Head-to-head for the ${names.length} available models (mean big blinds won per 100 hands by the row team against the column team).`),
+          h("div", { class: "tablewrap" },
+            h("table", { class: "tbl matrix" }, h("thead", {}, header), h("tbody", {}, rows)),
+          ),
+        ),
+      );
+    }
     const board = data.tournament?.groups?.[0]?.board;
     const teams = board?.teams || [];
     const matrix = board?.matrix || {};
-    if (!teams.length) {
-      page.append(h("div", { class: "card empty" }, "No results yet."));
-      return;
-    }
-    const names = teams.map((t) => t.team);
-    const header = h("tr", {}, h("th", {}, "Team"), names.map((n) => h("th", {}, n)));
-    const rows = names.map((me) =>
-      h("tr", {},
-        h("td", {}, h("a", { href: `#/team/${encodeURIComponent(me)}` }, me)),
-        names.map((other) => {
-          if (other === me) return h("td", { class: "diag" }, "—");
-          const cell = matrix[me]?.[other];
-          if (!cell) return h("td", { class: "muted" }, "—");
-          const value = cell.mean_bb;
-          return h("td", { class: `num ${value > 0 ? "pos" : value < 0 ? "neg" : ""}` },
-            `${fmtBB(value)}`, h("br"), h("span", { class: "muted small" }, `± ${cell.ci95_bb == null ? "—" : cell.ci95_bb.toFixed(1)}`));
-        }),
-      ),
-    );
-    page.append(
-      h("div", { class: "card" },
-        h("p", {}, "Mean big blinds won per 100 hands by the row team against the column team, with the 95% interval."),
-        h("div", { class: "tablewrap" },
-          h("table", { class: "tbl matrix" }, h("thead", {}, header), h("tbody", {}, rows)),
+    if (teams.length) {
+      const names = teams.map((t) => t.team);
+      const header = h("tr", {}, h("th", {}, "Team"), names.map((n) => h("th", {}, n)));
+      const rows = names.map((me) =>
+        h("tr", {},
+          h("td", {}, h("a", { href: `#/team/${encodeURIComponent(me)}` }, me)),
+          names.map((other) => {
+            if (other === me) return h("td", { class: "diag" }, "—");
+            const cell = matrix[me]?.[other];
+            if (!cell) return h("td", { class: "muted" }, "—");
+            const value = cell.mean_bb;
+            return h("td", { class: `num ${value > 0 ? "pos" : value < 0 ? "neg" : ""}` },
+              `${fmtBB(value)}`, h("br"), h("span", { class: "muted small" }, `± ${cell.ci95_bb == null ? "—" : cell.ci95_bb.toFixed(1)}`));
+          }),
         ),
-      ),
-    );
+      );
+      page.append(
+        h("div", { class: "card" },
+          h("h2", {}, "My bots"),
+          h("p", {}, "Head-to-head for the five fork bots."),
+          h("div", { class: "tablewrap" },
+            h("table", { class: "tbl matrix" }, h("thead", {}, header), h("tbody", {}, rows)),
+          ),
+        ),
+      );
+    }
   }).catch((error) => {
     page.append(h("div", { class: "card error" }, `Could not load the matrix: ${error.message}`));
   });
@@ -521,12 +557,14 @@ function matchesView() {
   return page;
 }
 
-function leaderboardTable(teams, samplesFor) {
+function leaderboardTable(teams, samplesFor, availableSet = null) {
   const rows = teams.map((t) => {
     const std = stdFromCi(t.ci95, samplesFor(t));
+    const isAvailable = availableSet ? availableSet.has(t.team) : null;
     return h("tr", {},
       h("td", { class: "num" }, t.rank == null ? "—" : String(t.rank)),
-      h("td", {}, h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team)),
+      h("td", {}, h("a", { href: `#/team/${encodeURIComponent(t.team)}` }, t.team),
+        isAvailable === true ? h("span", { class: "badge green" }, " ✓") : isAvailable === false ? h("span", { class: "badge red" }, " ✗") : null),
       h("td", { class: `num ${t.score > 0 ? "pos" : t.score < 0 ? "neg" : ""}` }, fmtBB(t.score)),
       h("td", { class: "num muted" }, t.ci95 == null ? "—" : `± ${t.ci95.toFixed(1)}`),
       h("td", { class: "num muted" }, std == null ? "—" : std.toFixed(1)),
@@ -551,15 +589,16 @@ function teamsView() {
   const page = h("div", { class: "page" });
   page.append(h("h1", {}, "Teams"));
   loadTournament().then((data) => {
+    const available = new Set(data.availableTeams || []);
     const myBoard = data.tournament?.groups?.[0]?.board;
     const myTeams = myBoard?.teams || [];
     page.append(h("h2", {}, "My bots"));
     page.append(h("p", { class: "muted small" }, "The five A-E models from the poker_bot fork, renamed by style. Score from the precomputed five-bot round robin."));
-    if (myTeams.length) page.append(leaderboardTable(myTeams, (t) => (t.hands ? t.hands / 2 : 0)));
+    if (myTeams.length) page.append(leaderboardTable(myTeams, (t) => (t.hands ? t.hands / 2 : 0), new Set(myTeams.map((t) => t.team))));
     const allTeams = data.allTeams?.teams || [];
     page.append(h("h2", {}, `All competition bots (${allTeams.length})`));
-    page.append(h("p", { class: "muted small" }, "Every team from the GreatUniHack 2026 poker bot competition, Group A. Std is the standard deviation of the per-deal bb/100, recovered from the 95% interval."));
-    if (allTeams.length) page.append(leaderboardTable(allTeams, (t) => t.samples || 0));
+    page.append(h("p", { class: "muted small" }, "Every team from the GreatUniHack 2026 poker bot competition, Group A. Std is the standard deviation of the per-deal bb/100, recovered from the 95% interval. ✓ = model files downloaded, ✗ = not yet."));
+    if (allTeams.length) page.append(leaderboardTable(allTeams, (t) => t.samples || 0, available));
   }).catch((error) => {
     page.append(h("div", { class: "card error" }, `Could not load teams: ${error.message}`));
   });
@@ -665,7 +704,6 @@ function aboutView() {
 
 const ROUTES = {
   play: playView,
-  tournament: tournamentView,
   teams: teamsView,
   matrix: matrixView,
   matches: matchesView,

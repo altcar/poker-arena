@@ -1,0 +1,1 @@
+export const availableTeams = {"teams":["adaptive","aggressive","brinzeroseven","conservative","dryrun","error404","gitpulse","guinnessssss","manchester_fried_chicken","markus-he","mixed","null_pointers","packet-loss-saint-germain","pointus","puhguh","runtime-terror","semi-cracked-devs","study-holic","terpsichord","whitespider","workhorse"]};

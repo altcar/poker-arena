@@ -122,11 +122,15 @@ export class Game {
   constructor(options = {}) {
     this.humanName = options.humanName || "You";
     this.botKeys = options.botKeys || TABLE_BOTS;
+    this.humanPlaying = options.humanPlaying !== false;
     this.stack = options.stack || 500;
     this.smallBlind = options.smallBlind || 10;
     this.bigBlind = options.bigBlind || 20;
     this.seed = options.seed || 1;
-    this.players = [{ name: this.humanName, key: null, isHuman: true }];
+    this.players = [];
+    if (this.humanPlaying) {
+      this.players.push({ name: this.humanName, key: null, isHuman: true });
+    }
     for (const key of this.botKeys) {
       const spec = botByKey(key);
       this.players.push({ name: spec.name, key, isHuman: false });
@@ -142,12 +146,12 @@ export class Game {
     this.awaitingNextHand = true;
     this.humanBusted = false;
   }
-
   serialize() {
     return {
       version: 1,
       humanName: this.humanName,
       botKeys: this.botKeys,
+      humanPlaying: this.humanPlaying,
       stack: this.stack,
       smallBlind: this.smallBlind,
       bigBlind: this.bigBlind,
@@ -168,6 +172,7 @@ export class Game {
     const game = Object.create(Game.prototype);
     game.humanName = data.humanName;
     game.botKeys = data.botKeys;
+    game.humanPlaying = data.humanPlaying !== false;
     game.stack = data.stack;
     game.smallBlind = data.smallBlind;
     game.bigBlind = data.bigBlind;
@@ -191,7 +196,7 @@ export class Game {
   }
 
   get humanId() {
-    return 0;
+    return this.humanPlaying ? 0 : null;
   }
 
   startHand() {
@@ -219,6 +224,7 @@ export class Game {
   act(kind, amount = 0) {
     if (this.awaitingNextHand) throw new Error("start the next hand first");
     if (!this.hand || this.hand.result) throw new Error("the hand is over");
+    if (!this.humanPlaying) throw new Error("no human seat");
     let action;
     if (kind === "fold") action = PlayerAction.fold(this.humanId);
     else if (kind === "call") action = PlayerAction.call(this.humanId);
@@ -269,7 +275,8 @@ export class Game {
     };
     if (!h) return { ...base, waitingFor: "next" };
     const s = h.state;
-    const humanTurn = !h.result && s.to_act === this.humanId;
+    const humanTurn = this.humanPlaying && !h.result && s.to_act === this.humanId;
+    const youHole = this.humanPlaying && h.hands[0] ? h.hands[0].map(String) : null;
     const seats = this.players.map((p, i) => ({
       seat: i,
       name: p.name,
@@ -280,8 +287,8 @@ export class Game {
       acted: s.acted[i],
       status: s.status(i),
       hole:
-        i === this.humanId
-          ? h.hands[i].map(String)
+        this.humanPlaying && i === 0
+          ? youHole
           : h.result
             ? h.result.hands[i].map(String)
             : null,
@@ -310,7 +317,7 @@ export class Game {
         faults: h.faults,
         result: h.result,
       },
-      waitingFor: h.result ? "over" : humanTurn ? "human" : "ai",
+      waitingFor: h.result ? "over" : humanTurn ? "human" : this.humanPlaying ? "ai" : "over",
       history: this.history.slice(-10),
     };
   }
