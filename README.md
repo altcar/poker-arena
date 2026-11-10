@@ -55,23 +55,17 @@ wrangler d1 execute poker-arena --command "CREATE TABLE ..."   # see src/worker.
 
 ### Git-connected deployments
 
-There are two ways to deploy on every push:
+Both methods are now set up for this project:
 
-1. **Cloudflare's native Git integration (recommended).** In the dashboard go
-   to **Workers & Pages → poker-arena → Settings → Builds → Connect**, choose
-   GitHub, and select `altcar/poker-arena`. Pushes to `main` then build and
-   deploy automatically.
+1. **Cloudflare's native Git integration (verified).** The Worker is connected
+   to `altcar/poker-arena` via Workers Builds: pushes to `main` trigger a
+   build that runs `wrangler deploy`. A test build succeeded end-to-end on
+   2026-11-10. Manage it in the dashboard under
+   **Workers & Pages → poker-arena → Settings → Builds**.
 2. **GitHub Actions + Wrangler.** `.github/workflows/deploy.yml` runs
-   `wrangler deploy` on every push to `main`. Add two repository secrets:
-   - `CLOUDFLARE_API_TOKEN` — a Cloudflare API token with
-     `Cloudflare Workers: Edit` (and D1 if you want it to migrate),
-   - `CLOUDFLARE_ACCOUNT_ID` — your account id.
-
-   The workflow file is committed; pushing it needs the `workflow` scope on
-   the GitHub token. Run `gh auth refresh -h github.com -s workflow`, enter
-   the one-time code at <https://github.com/login/device>, then `git push`.
-   Without that scope, add the file yourself from
-   `.github/workflows/deploy.yml`.
+   `wrangler deploy` on every push to `main`. Add the repository secrets
+   `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The workflow file is
+   on `main`.
 
 ## The API
 
