@@ -135,10 +135,22 @@ export class Game {
       const spec = botByKey(key);
       this.players.push({ name: spec.name, key, isHuman: false });
     }
+    if (Array.isArray(options.playerNames)) {
+      let index = this.humanPlaying ? 1 : 0;
+      for (const player of this.players) {
+        if (player.isHuman) continue;
+        if (options.playerNames[index]) player.name = options.playerNames[index];
+        index += 1;
+      }
+    }
     this.modelInstances = this.players.map((p) =>
       p.isHuman ? null : createBot(p.key)
     );
-    this.stacks = Array(this.players.length).fill(this.stack);
+    this.stacks = Array.isArray(options.stacks) && options.stacks.length === this.players.length
+      ? options.stacks.map(Number)
+      : Array(this.players.length).fill(this.stack);
+    this.autoRebuy = options.autoRebuy !== false;
+    this.matchOver = false;
     this.button = 0;
     this.handNumber = 0;
     this.hand = null;
@@ -158,6 +170,8 @@ export class Game {
       seed: this.seed,
       players: this.players,
       stacks: this.stacks,
+      autoRebuy: this.autoRebuy,
+      matchOver: this.matchOver,
       button: this.button,
       handNumber: this.handNumber,
       history: this.history,
@@ -179,6 +193,8 @@ export class Game {
     game.seed = data.seed;
     game.players = data.players;
     game.stacks = data.stacks;
+    game.autoRebuy = data.autoRebuy !== false;
+    game.matchOver = Boolean(data.matchOver);
     game.button = data.button;
     game.handNumber = data.handNumber;
     game.history = data.history || [];
@@ -201,6 +217,7 @@ export class Game {
 
   startHand() {
     if (!this.awaitingNextHand) throw new Error("a hand is already in progress");
+    if (this.matchOver) throw new Error("the match is over");
     const deck = fullDeck();
     // Same scheme as the Python arena: a fresh Random per deal, shuffled.
     new PythonRandom((this.seed * 1000003 + this.handNumber) >>> 0).shuffle(deck);
@@ -240,11 +257,12 @@ export class Game {
     this.stacks = [...result.finalStacks];
     // Keep the table full: busted bots rebuy, a busted human ends the run.
     for (let i = 0; i < this.stacks.length; i += 1) {
-      if (this.stacks[i] === 0 && !this.players[i].isHuman) {
+      if (this.stacks[i] === 0 && !this.players[i].isHuman && this.autoRebuy) {
         this.stacks[i] = this.stack;
       }
     }
     this.humanBusted = this.stacks[this.humanId] === 0;
+    if (!this.autoRebuy) this.matchOver = this.stacks.some((s) => s === 0);
     this.history.push({
       hand: this.handNumber,
       net: result.net,
@@ -259,6 +277,7 @@ export class Game {
   rebuy() {
     this.stacks = Array(this.seatCount).fill(this.stack);
     this.humanBusted = false;
+    this.matchOver = false;
     this.awaitingNextHand = true;
   }
 
@@ -270,6 +289,8 @@ export class Game {
       stacks: [...this.stacks],
       awaitingNextHand: this.awaitingNextHand,
       humanBusted: this.humanBusted,
+      matchOver: this.matchOver,
+      autoRebuy: this.autoRebuy,
       seatCount: this.seatCount,
       players: this.players.map((p) => ({ name: p.name, isHuman: p.isHuman })),
     };

@@ -20,7 +20,15 @@
     "tournament:data": "node scripts/make_our_tournament.mjs",
     "browser:team-files": "node scripts/prepare_browser_runtime.mjs",
     "browser:engine": "node scripts/copy_browser_engine.mjs",
-    "browser:test": "node scripts/test_pyodide.mjs"
+    "browser:test": "node scripts/test_pyodide.mjs",
+    "db:schema": "wrangler d1 execute poker-arena --remote --file=src/schema.sql",
+    "seed": "node scripts/seed_platform.mjs",
+    "test:modes": "node scripts/test_new_modes.mjs",
+    "test:platform": "node scripts/test_platform_ui.mjs",
+    "test:forms": "node scripts/test_forms_ui.mjs",
+    "test:rated": "node scripts/test_rated_ui.mjs",
+    "test:modeui": "node scripts/test_modes_ui.mjs",
+    "test:uploaded": "node scripts/test_uploaded_table.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.160.0"

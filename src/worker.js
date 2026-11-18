@@ -1,4 +1,4 @@
-// The Poker Arena worker: a static site plus the game API.
+// The Poker Arena worker: static assets, the game API and the platform API.
 //
 //   POST /api/session              start a 6-player table (you + five bots)
 //   GET  /api/session/:id          current state
@@ -10,6 +10,9 @@
 //   GET  /api/teams                team metadata
 //   GET  /api/teams.csv            teams with their GitHub repos
 //   POST /api/matches              record a match result
+//
+// Platform routes (accounts, bot uploads, leaderboard, forum, newsletter,
+// tournaments, seasons, live feed) live in platform.js.
 
 import { Game } from "./game.js";
 import { BOTS, botByKey, createBot } from "./bots.js";
@@ -21,6 +24,7 @@ import { ourTournament } from "./our_tournament_data.js";
 import { teamsData } from "./teams_data.js";
 import { allTeams } from "./all_teams_data.js";
 import { availableTeams } from "./available_teams_data.js";
+import { handlePlatform } from "./platform.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -101,6 +105,10 @@ async function handleApi(request, env, url) {
     });
   }
 
+  // Accounts, uploaded bots, forum, newsletter, tournaments, seasons and live.
+  const platform = await handlePlatform(request, env, url);
+  if (platform) return platform;
+
   if (method === "POST" && path === "/api/session") {
     const body = await request.json().catch(() => ({}));
     const game = new Game({
@@ -110,6 +118,9 @@ async function handleApi(request, env, url) {
       stack: Number(body.stack) || 500,
       smallBlind: Number(body.smallBlind) || 10,
       bigBlind: Number(body.bigBlind) || 20,
+      stacks: Array.isArray(body.stacks) ? body.stacks : undefined,
+      autoRebuy: body.autoRebuy !== false,
+      mode: body.mode,
       seed: Number(body.seed) || (Date.now() % 1000000),
     });
     const { state } = game.startHand();

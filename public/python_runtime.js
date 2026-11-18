@@ -182,6 +182,42 @@ export function registerPythonBots(keys, names = {}) {
   }
 }
 
+function base64Bytes(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/**
+ * Load a bot uploaded through the platform. The API returns model.py, any
+ * extra .py modules and an optional pickled instance; we write them into the
+ * Pyodide filesystem and register the instance like a competition team.
+ */
+export async function loadUserBot(bot, onProgress = () => {}) {
+  const key = `user:${bot.id}`;
+  registerBotSpec({ key, name: bot.name, create: () => new PythonBot(key) });
+  const rt = await ensurePythonRuntime(onProgress);
+  if (loadedTeams.has(key)) return rt;
+  onProgress(`Loading ${bot.name}…`);
+  const response = await fetch(`/api/bots/${encodeURIComponent(bot.id)}/files`);
+  if (!response.ok) throw new Error(`could not load ${bot.name}: HTTP ${response.status}`);
+  const data = await response.json();
+  const folder = `/userbots/${bot.id}`;
+  rt.pyodide.FS.mkdirTree(folder);
+  rt.pyodide.FS.writeFile(`${folder}/model.py`, data.source);
+  for (const extra of data.extras || []) {
+    rt.pyodide.FS.writeFile(`${folder}/${extra.name}`, extra.source);
+  }
+  if (data.pickle) {
+    rt.pyodide.FS.writeFile(`${folder}/${data.pklName || "model.pkl"}`, base64Bytes(data.pickle));
+  }
+  const result = JSON.parse(rt.loadTeam(key, folder, data.pklName || ""));
+  if (!result.ok) throw new Error(`${bot.name}: ${result.error}`);
+  loadedTeams.add(key);
+  return rt;
+}
+
 export function hasPythonRuntime() {
   return runtime !== null;
 }

@@ -7,7 +7,15 @@
 //   #/about      what this is and the API
 
 import { Game } from "./engine/game.js";
-import { loadTeams, registerPythonBots } from "./python_runtime.js";
+import { loadTeams, registerPythonBots, loadUserBot } from "./python_runtime.js";
+import {
+  auth, ensureAuth, gamesView, gameDetailView, leaderboardView, tournamentsView,
+  tournamentView, liveView, forumView, newThreadView, threadView, stackView,
+  articleView, newsletterView, loginView, signupView, accountView, uploadView,
+  botTestView, rulesView, seasonView,
+} from "./platform_client.js";
+import { draw27View } from "./views_draw27.js";
+import { ofcView } from "./views_ofc.js";
 
 const main = document.getElementById("main");
 
@@ -118,6 +126,16 @@ let gameState = null;
 let localGame = null;
 let loadingMessage = null;
 const knownTeamNames = {};
+let playMode = "nlh6";
+let lastSetup = null;
+let bossMode = false;
+let bossRun = null;
+
+const BOSSES = [
+  { key: "aggressive", name: "The Bully", stack: 1500, smallBlind: 10, bigBlind: 20 },
+  { key: "mixed", name: "The Wall", stack: 2500, smallBlind: 15, bigBlind: 30 },
+  { key: "adaptive", name: "The Machine", stack: 4000, smallBlind: 25, bigBlind: 50 },
+];
 
 // The five bots that exist in the JavaScript engine. Competition teams are
 // Python models; they run in the browser through Pyodide.
@@ -139,6 +157,11 @@ function rememberTeams(data) {
 }
 
 function teamName(key) {
+  if (key.startsWith("user:")) {
+    const found = (auth.bots || []).find((bot) => `user:${bot.id}` === key);
+    if (found) return found.name;
+    return knownTeamNames[key] || "your bot";
+  }
   return PLAYABLE_NAMES[key] || knownTeamNames[key] || key;
 }
 
@@ -162,6 +185,9 @@ function setLoading(message) {
 
 async function startSession(name, botKeys, playing = humanPlaying) {
   humanPlaying = playing !== false;
+  bossMode = false;
+  bossRun = null;
+  playMode = "nlh6";
   let keys = [...new Set((botKeys || []).filter((key) => typeof key === "string"))];
   let available = new Set();
   try {
@@ -171,10 +197,12 @@ async function startSession(name, botKeys, playing = humanPlaying) {
   } catch {
     // The setup page still works with the five JS bots.
   }
-  keys = keys.filter((key) => PLAYABLE_SET.has(key) || available.has(key));
+  keys = keys.filter((key) => PLAYABLE_SET.has(key) || available.has(key) || key.startsWith("user:"));
   if (!keys.length) keys = [...PLAYABLE_KEYS];
+  const userKeys = keys.filter((key) => key.startsWith("user:"));
+  const teamKeys = keys.filter((key) => !key.startsWith("user:"));
 
-  const needsPython = keys.some((key) => !PLAYABLE_SET.has(key));
+  const needsPython = teamKeys.some((key) => !PLAYABLE_SET.has(key)) || userKeys.length > 0;
   if (!needsPython) {
     try {
       const data = await api("/api/session", {
@@ -189,6 +217,7 @@ async function startSession(name, botKeys, playing = humanPlaying) {
       sessionId = data.sessionId;
       gameState = data.state;
       localStorage.setItem("pokerArenaSession", sessionId);
+      lastSetup = { mode: "nlh6", keys, name: humanPlaying ? (name || "You") : "Spectator" };
       loadingMessage = null;
       render();
     } catch (error) {
@@ -200,8 +229,13 @@ async function startSession(name, botKeys, playing = humanPlaying) {
   // Competition bots: run the submitted Python in the browser.
   try {
     setLoading("Loading the Python runtime (about 10 MB)…");
-    await loadTeams(keys, (message) => setLoading(message));
-    registerPythonBots(keys, knownTeamNames);
+    await loadTeams(teamKeys, (message) => setLoading(message));
+    registerPythonBots(teamKeys, knownTeamNames);
+    for (const key of userKeys) {
+      const meta = (await api(`/api/bots/${encodeURIComponent(key.slice(5))}`)).bot;
+      knownTeamNames[key] = meta.name;
+      await loadUserBot(meta, (message) => setLoading(message));
+    }
     localGame = new Game({
       humanName: humanPlaying ? (name || "You") : "Spectator",
       botKeys: keys,
@@ -211,6 +245,7 @@ async function startSession(name, botKeys, playing = humanPlaying) {
     const { state } = localGame.startHand();
     gameState = state;
     sessionId = null;
+    lastSetup = { mode: "nlh6", keys, name: humanPlaying ? (name || "You") : "Spectator" };
     localStorage.removeItem("pokerArenaSession");
     loadingMessage = null;
     render();
@@ -234,6 +269,107 @@ async function resumeSession() {
   }
 }
 
+function startLocalGame(name, keys, playing = true, options = {}) {
+  localGame = new Game({
+    humanName: name || "You",
+    botKeys: keys,
+    humanPlaying: playing,
+    seed: Date.now() % 1000000,
+    stack: options.stack || 500,
+    smallBlind: options.smallBlind || 10,
+    bigBlind: options.bigBlind || 20,
+    stacks: options.stacks,
+    autoRebuy: options.autoRebuy,
+    playerNames: options.playerNames,
+  });
+  const { state } = localGame.startHand();
+  gameState = state;
+  sessionId = null;
+  loadingMessage = null;
+  localStorage.removeItem("pokerArenaSession");
+  playMode = options.mode || "hu";
+  lastSetup = { mode: playMode, keys: [...keys], name: name || "You", options };
+  if (location.hash !== "#/play") location.hash = "#/play";
+  else render();
+}
+
+async function startChallenge(container, { opponent, botId }) {
+  container.replaceChildren(h("div", { class: "card" }, h("p", { class: "muted" }, "Loading the opponent…")));
+  try {
+    if (botId) {
+      const meta = (await api(`/api/bots/${encodeURIComponent(botId)}`)).bot;
+      await loadUserBot(meta, (message) => {
+        container.replaceChildren(h("div", { class: "card" }, h("p", { class: "muted" }, message)));
+      });
+      startLocalGame("You", [`user:${meta.id}`], true, { mode: "hu", playerNames: ["You", meta.name] });
+      return;
+    }
+    rememberTeams(await loadTournament().catch(() => ({})));
+    if (PLAYABLE_SET.has(opponent)) {
+      startLocalGame("You", [opponent], true, { mode: "hu" });
+      return;
+    }
+    await loadTeams([opponent], (message) => {
+      container.replaceChildren(h("div", { class: "card" }, h("p", { class: "muted" }, message)));
+    });
+    registerPythonBots([opponent], { ...knownTeamNames, [opponent]: opponent });
+    startLocalGame("You", [opponent], true, { mode: "hu", playerNames: ["You", opponent] });
+  } catch (error) {
+    container.replaceChildren(h("div", { class: "card error" }, `Could not start the challenge: ${error.message}`));
+  }
+}
+
+function startBossRun(level = 0) {
+  const boss = BOSSES[level];
+  bossMode = true;
+  bossRun = { level, completed: false, over: false };
+  startLocalGame("You", [boss.key], true, {
+    mode: "boss",
+    stack: 1000,
+    smallBlind: boss.smallBlind,
+    bigBlind: boss.bigBlind,
+    stacks: [1000, boss.stack],
+    autoRebuy: false,
+    playerNames: ["You", boss.name],
+  });
+  playMode = "boss";
+  lastSetup = { mode: "boss", level };
+}
+
+function bossNext() {
+  if (!bossRun) return;
+  const human = localGame.stacks[0];
+  const boss = localGame.stacks[1];
+  if (human <= 0) {
+    startBossRun(0);
+    return;
+  }
+  if (boss <= 0) {
+    if (bossRun.level >= BOSSES.length - 1) {
+      bossRun.completed = true;
+      gameState = localGame.publicState();
+      render();
+      return;
+    }
+    startBossRun(bossRun.level + 1);
+    return;
+  }
+  nextHandRaw();
+}
+
+function nextHandRaw() {
+  if (localGame) {
+    const { state } = localGame.startHand();
+    gameState = state;
+    render();
+    return;
+  }
+  api(`/api/session/${sessionId}/next`, { method: "POST" }).then((data) => {
+    gameState = data.state;
+    render();
+  });
+}
+
 async function act(kind, amount = 0) {
   if (localGame) {
     const { state } = localGame.act(kind, amount);
@@ -250,6 +386,10 @@ async function act(kind, amount = 0) {
 }
 
 async function nextHand() {
+  if (bossMode) {
+    bossNext();
+    return;
+  }
   if (localGame) {
     const { state } = localGame.startHand();
     gameState = state;
@@ -278,11 +418,23 @@ function newSession() {
   sessionId = null;
   gameState = null;
   loadingMessage = null;
+  bossMode = false;
+  bossRun = null;
+  playMode = "nlh6";
   localStorage.removeItem("pokerArenaSession");
   render();
 }
 
 async function startFreshGame() {
+  if (bossMode) {
+    startBossRun(0);
+    return;
+  }
+  if (lastSetup && lastSetup.mode === "hu" && lastSetup.keys?.length) {
+    const options = lastSetup.options || { mode: "hu" };
+    startLocalGame("You", lastSetup.keys, true, options);
+    return;
+  }
   const name = gameState?.players?.[0]?.isHuman ? gameState.players[0].name : "You";
   await startSession(name, [...selectedBots], humanPlaying);
 }
@@ -348,7 +500,33 @@ function setupView() {
 
 function playView() {
   const page = h("div", { class: "page" });
-  page.append(h("h1", {}, "Play the bots"));
+  const boss = bossMode && bossRun ? BOSSES[bossRun.level] : null;
+  page.append(h("h1", {}, boss ? "Big Bad Bots" : "Play the bots"));
+  page.append(modeBar(bossMode ? "boss" : playMode));
+
+  if (boss) {
+    const human = localGame?.stacks?.[0] ?? 0;
+    const bossStack = localGame?.stacks?.[1] ?? 0;
+    page.append(
+      h("div", { class: "card boss-banner" },
+        h("div", { class: "boss-title" },
+          h("span", { class: "badge gold" }, `Round ${bossRun.level + 1} / 3`),
+          h("strong", {}, boss.name),
+        ),
+        h("div", { class: "boss-stacks" },
+          h("span", {}, `You ${fmtChips(human)}`),
+          h("span", { class: "muted" }, "vs"),
+          h("span", {}, `${boss.name} ${fmtChips(bossStack)}`),
+          h("span", { class: "muted small" }, `blinds ${boss.smallBlind}/${boss.bigBlind}`),
+        ),
+        h("div", { class: "boss-dots" },
+          BOSSES.map((_, i) => h("span", {
+            class: `boss-dot${i < bossRun.level ? " done" : i === bossRun.level ? " current" : ""}`,
+          }, i < bossRun.level ? "✓" : String(i + 1))),
+        ),
+      ),
+    );
+  }
 
   if (loadingMessage) {
     page.append(
@@ -377,8 +555,18 @@ function playView() {
   const seatNames = (state.players || []).map((p) => p.name).join(", ");
   page.append(
     h("div", { class: "controls" },
-      h("button", { class: "primary", onclick: startFreshGame }, "Start a new game"),
-      h("button", { class: "ghost", onclick: () => { location.hash = "#/teams"; } }, "Change opponents"),
+      h("button", { class: "primary", onclick: startFreshGame }, bossMode ? "Restart the run" : "Start a new game"),
+      bossMode
+        ? h("button", { class: "ghost", onclick: () => {
+            bossMode = false;
+            bossRun = null;
+            localGame = null;
+            sessionId = null;
+            gameState = null;
+            loadingMessage = null;
+            location.hash = "#/play?mode=boss";
+          } }, "Leave run")
+        : h("button", { class: "ghost", onclick: () => { location.hash = "#/teams"; } }, "Change opponents"),
       h("span", { class: "muted small" }, `${state.players?.length || 0} seats · ${seatNames}`),
     ),
   );
@@ -450,8 +638,16 @@ function playView() {
           ),
         ),
         h("div", { class: "actions" },
-          h("button", { class: "primary", onclick: nextHand }, "Deal next hand"),
-          state.humanBusted
+          bossMode
+            ? (bossRun.completed || bossRun.over)
+              ? h("button", { class: "primary", onclick: () => startBossRun(0) }, bossRun.completed ? "New run" : "Restart the run")
+              : h("button", { class: "primary", onclick: nextHand },
+                  localGame.stacks[1] <= 0 ? (bossRun.level >= 2 ? "Finish the run" : `Face ${BOSSES[bossRun.level + 1].name}`) : "Deal next hand")
+            : h("button", { class: "primary", onclick: nextHand }, "Deal next hand"),
+          bossMode && (bossRun.completed || bossRun.over)
+            ? h("a", { class: "btn ghost", href: "#/games/boss" }, "Boss rules")
+            : null,
+          !bossMode && state.humanBusted
             ? h("button", { class: "danger", onclick: rebuy }, "Rebuy")
             : null,
           h("button", { class: "ghost", onclick: newSession }, "New table"),
@@ -528,6 +724,112 @@ function playView() {
   }
 
   return page;
+}
+
+// ---------------------------------------------------------------- other play modes
+
+function modeBar(active) {
+  return h("div", { class: "mode-bar" },
+    h("a", { class: active === "nlh6" ? "active" : "", href: "#/play" }, "NLH 6-max"),
+    h("a", { class: active === "hu" ? "active" : "", href: "#/play?mode=hu" }, "Heads-up"),
+    h("a", { class: active === "boss" ? "active" : "", href: "#/play?mode=boss" }, "Big Bad Bots"),
+    h("a", { class: active === "draw27" ? "active" : "", href: "#/play?mode=draw27" }, "2-7 Triple Draw"),
+    h("a", { class: active === "ofc" ? "active" : "", href: "#/play?mode=ofc" }, "Pineapple OFC"),
+    h("a", { href: "#/games" }, "All games →"),
+  );
+}
+
+function headsUpView(query = {}) {
+  const page = h("div", { class: "page" });
+  page.append(
+    h("h1", {}, "Heads-up Hold'em"),
+    modeBar("hu"),
+    h("p", { class: "muted" }, "One opponent. The button posts the small blind and acts first before the flop, then last after it."),
+  );
+
+  if (query.opponent || query.bot) {
+    const box = h("div", {});
+    page.append(box);
+    startChallenge(box, { opponent: query.opponent, botId: query.bot });
+    return page;
+  }
+
+  const picker = h("div", { class: "card" }, h("p", { class: "muted" }, "Loading opponents…"));
+  page.append(picker);
+  Promise.all([loadTournament().catch(() => ({})), api("/api/bots").catch(() => ({ bots: [] }))]).then(([data, bots]) => {
+    rememberTeams(data || {});
+    const available = new Set(data?.availableTeams || []);
+    const options = [];
+    for (const key of PLAYABLE_KEYS) options.push({ value: key, label: `${PLAYABLE_NAMES[key]} (JavaScript)` });
+    const teams = (data?.allTeams?.teams || []).filter((t) => available.has(t.team)).map((t) => t.team).sort();
+    for (const team of teams) options.push({ value: team, label: team });
+    for (const bot of bots.bots || []) options.push({ value: `bot:${bot.id}`, label: `${bot.name} (uploaded by ${bot.owner || "?"})` });
+    const select = h("select", {}, options.map((o) => h("option", { value: o.value }, o.label)));
+    picker.replaceChildren(
+      h("h2", {}, "Pick one opponent"),
+      h("p", { class: "muted small" }, "The five JavaScript bots start instantly. Competition and uploaded bots load their Python in your browser on first use."),
+      h("div", { class: "actions" },
+        select,
+        h("button", { class: "primary", onclick: () => {
+          const value = select.value;
+          if (value.startsWith("bot:")) startChallenge(picker, { botId: value.slice(4) });
+          else startChallenge(picker, { opponent: value });
+        } }, "Sit down"),
+        h("a", { class: "btn ghost", href: "#/play" }, "Six-max instead"),
+      ),
+    );
+  });
+  return page;
+}
+
+function bossView() {
+  const page = h("div", { class: "page" });
+  page.append(
+    h("h1", {}, "Big Bad Bots"),
+    modeBar("boss"),
+    h("div", { class: "card" },
+      h("p", {}, "A three-boss gauntlet. You get 1,000 chips each round; the bosses get more. The blinds rise. No rebuys."),
+      h("div", { class: "boss-list" },
+        BOSSES.map((boss, index) =>
+          h("div", { class: "boss-row" },
+            h("span", { class: "badge gold" }, `Round ${index + 1}`),
+            h("strong", {}, boss.name),
+            h("span", { class: "muted small" }, `${boss.stack.toLocaleString("en-GB")} chips · blinds ${boss.smallBlind}/${boss.bigBlind}`),
+            h("span", { class: "muted small" }, ["Aggressive", "Mixed", "Adaptive"][index]),
+          )
+        ),
+      ),
+      h("div", { class: "actions" },
+        h("button", { class: "primary", onclick: () => startBossRun(0) }, "Start the run"),
+        h("a", { class: "btn ghost", href: "#/games/boss" }, "Full rules"),
+      ),
+    ),
+    h("div", { class: "card muted" },
+      h("p", {}, "Take the boss's whole stack to advance. Lose yours and the run ends and restarts from round 1."),
+    ),
+  );
+  return page;
+}
+
+function playRouterView(query = {}) {
+  const mode = query.mode || (query.opponent || query.bot ? "hu" : "nlh6");
+  if (mode === "draw27") return draw27View();
+  if (mode === "ofc") return ofcView();
+  if (mode === "boss") return bossMode && localGame ? playView() : bossView();
+  if (mode === "hu") {
+    if (query.opponent || query.bot) return headsUpView(query);
+    if (bossMode) {
+      bossMode = false;
+      bossRun = null;
+    }
+    if (localGame && lastSetup?.mode === "hu" && gameState) return playView();
+    return headsUpView(query);
+  }
+  if (bossMode) {
+    bossMode = false;
+    bossRun = null;
+  }
+  return playView();
 }
 
 // ---------------------------------------------------------------- data views
@@ -732,7 +1034,7 @@ function teamKey(name) {
 function teamsView() {
   const page = h("div", { class: "page" });
   page.append(h("h1", {}, "Teams"));
-  loadTournament().then((data) => {
+  loadTournament().then(async (data) => {
     rememberTeams(data);
     const available = new Set(data.availableTeams || []);
     const repoMap = {};
@@ -849,6 +1151,42 @@ function teamsView() {
       );
     }
 
+    const uploaded = await api("/api/bots").catch(() => ({ bots: [] }));
+    if (uploaded.bots?.length) {
+      page.append(h("h2", {}, `Uploaded bots (${uploaded.bots.length})`));
+      page.append(h("p", { class: "muted small" },
+        "Bots uploaded by arena members. They run their Python in your browser, exactly like the competition models."));
+      const rows = uploaded.bots.map((bot) => {
+        const key = `user:${bot.id}`;
+        knownTeamNames[key] = bot.name;
+        return h("tr", {},
+          h("td", {}, h("input", {
+            type: "checkbox",
+            checked: selected.has(key),
+            onchange: (e) => toggle(key, e.target.checked, e),
+          })),
+          h("td", {}, bot.name),
+          h("td", { class: "muted" }, bot.owner || "—"),
+          h("td", {}, h("span", { class: `badge ${bot.division === "elite" ? "gold" : bot.division === "raised" ? "blue" : ""}` }, bot.division)),
+          h("td", { class: "num" }, String(bot.rating)),
+          h("td", { class: "num" }, `${bot.wins}–${bot.draws}–${bot.losses}`),
+          h("td", {}, h("a", { href: `#/test/${bot.id}` }, "Test")),
+        );
+      });
+      page.append(
+        h("div", { class: "card tablewrap" },
+          h("table", { class: "tbl" },
+            h("thead", {}, h("tr", {},
+              h("th", {}, "Pick"), h("th", {}, "Bot"), h("th", {}, "Owner"),
+              h("th", {}, "Division"), h("th", { class: "num" }, "Rating"),
+              h("th", { class: "num" }, "W–D–L"), h("th", {}, ""),
+            )),
+            h("tbody", {}, rows),
+          ),
+        ),
+      );
+    }
+
     document.body.append(floatingBtn);
     window.addEventListener("hashchange", () => floatingBtn.remove(), { once: true });
   }).catch((error) => {
@@ -933,31 +1271,47 @@ function aboutView() {
   return h("div", { class: "page" },
     h("h1", {}, "About Poker Arena"),
     h("div", { class: "card" },
-      h("p", {}, "This is a playable version of the poker bot competition. You sit at a six-handed table with the five bots from the altcar/poker_bot fork, renamed by style: Conservative, Workhorse, Adaptive, Mixed and Aggressive."),
-      h("p", {}, "The Teams page lists every competition team. Each name links to the GitHub repository where the team's model.py and pickle were found, and the files are copied into all-teams/. Those competition bots are Python models: they play the offline round robin on the Head-to-head and Matches pages, while the five fork bots are the ones that run live in your browser."),
-      h("p", {}, "The engine and the bots are a line-for-line JavaScript port of the Python code in the fork. The port is verified hand-for-hand against the real Python engine: the Monte-Carlo draws use Python's own MT19937 and random.sample, so a given seed and deck produce the same actions."),
-      h("p", {}, "The original Python files are in python/ (including the submitted goldman-stanley.pkl). The tournament data is precomputed with the Python engine."),
+      h("p", {}, "Poker Arena is a free, no-stakes arena for developer-built poker bots. Upload a Python model, challenge the house bots, enter tournaments and climb the leaderboard. You can also sit down yourself in any of the five game modes."),
+      h("h2", {}, "Five formats"),
+      h("ul", { class: "prose" },
+        h("li", {}, h("a", { href: "#/games/nlh6" }, "No-Limit Hold'em 6-max"), " — the main event and the format behind the 1,891-match round robin."),
+        h("li", {}, h("a", { href: "#/games/hu" }, "No-Limit Hold'em heads-up"), " — one opponent, wide ranges, rated challenges."),
+        h("li", {}, h("a", { href: "#/games/boss" }, "Big Bad Bots"), " — a three-boss gauntlet with bigger stacks and rising blinds."),
+        h("li", {}, h("a", { href: "#/games/draw27" }, "2-7 Triple Draw"), " — fixed-limit lowball with three draws."),
+        h("li", {}, h("a", { href: "#/games/ofc" }, "Pineapple OFC"), " — thirteen cards, three rows, fouls and royalties."),
+      ),
+      h("h2", {}, "Uploading a bot"),
+      h("p", {}, "An uploaded bot is a Python file defining class Model with seed, run and end_game. It runs in the browser through Pyodide, against the same engine shim as the 57 competition models. Nothing is executed on the server. Uploaded bots are public so anyone can challenge them."),
+      h("p", {}, "House bots keep their original submitted Python. The 57 competition teams were recovered from forks of Manchester-AI-Society/poker_bot; the Teams page links each one to the GitHub repository where its model was found."),
     ),
     h("div", { class: "card" },
       h("h2", {}, "API"),
       h("dl", { class: "kv" },
-        h("dt", {}, "POST /api/session"), h("dd", {}, "Start a table. Body: { humanName, botKeys, humanPlaying, stack, smallBlind, bigBlind, seed }."),
-        h("dt", {}, "GET /api/session/:id"), h("dd", {}, "Current state."),
-        h("dt", {}, "POST /api/session/:id/action"), h("dd", {}, 'Body: { kind: "fold" | "call" | "raise", amount }.'),
-        h("dt", {}, "POST /api/session/:id/next"), h("dd", {}, "Deal the next hand."),
-        h("dt", {}, "POST /api/decision"), h("dd", {}, "Ask one bot for its move. Body: { bot, hole, playerId, state, actions }."),
-        h("dt", {}, "GET /api/tournament"), h("dd", {}, "Our round robin (standings, matrix, matches), the official competition data, and team metadata."),
-        h("dt", {}, "GET /api/teams.csv"), h("dd", {}, "The teams with the GitHub repositories where their models were found."),
+        h("dt", {}, "POST /api/auth/signup"), h("dd", {}, "Body: { email, handle, password }. Sets an HttpOnly session cookie."),
+        h("dt", {}, "POST /api/auth/login"), h("dd", {}, "Body: { email, password }."),
+        h("dt", {}, "GET /api/auth/me"), h("dd", {}, "The current user and their bots."),
+        h("dt", {}, "POST /api/bots"), h("dd", {}, "Upload a bot. Body: { name, description, mode, source, extras, pickle, pklName }."),
+        h("dt", {}, "GET /api/bots/:id/files"), h("dd", {}, "model.py, extra modules and the optional pickle, as JSON."),
+        h("dt", {}, "POST /api/bots/:id/result"), h("dd", {}, "Record a rated challenge and update the Elo rating."),
+        h("dt", {}, "GET /api/leaderboard?division="), h("dd", {}, "House and uploaded bots, with divisions and ratings."),
+        h("dt", {}, "GET /api/tournaments"), h("dd", {}, "Scheduled events, results and open entries."),
+        h("dt", {}, "GET /api/forum/threads"), h("dd", {}, "Forum threads; POST to create one."),
+        h("dt", {}, "POST /api/newsletter"), h("dd", {}, "Body: { email }."),
+        h("dt", {}, "GET /api/live"), h("dd", {}, "The rolling live-match feed."),
+        h("dt", {}, "POST /api/session"), h("dd", {}, "Start a server-side table with the five JavaScript bots."),
+        h("dt", {}, "GET /api/tournament"), h("dd", {}, "The competition round robin, matrix, matches and team metadata."),
+        h("dt", {}, "GET /api/teams.csv"), h("dd", {}, "Teams with the GitHub repositories where their models were found."),
       ),
     ),
     h("div", { class: "card" },
       h("h2", {}, "Verification"),
       h("pre", {}, [
+        "npm run verify          # engine invariants\n",
         "npm run verify:python   # real Python engine, 50 hands\n",
         "npm run verify:js       # JavaScript port, 50 hands\n",
-        "npm run verify          # engine invariants\n",
+        "npm run test:modes      # 2-7 draw and OFC simulations\n",
       ]),
-      h("p", { class: "muted small" }, "The two dumps match action for action."),
+      h("p", { class: "muted small" }, "The two engine dumps match action for action. The platform UI tests drive a real headless browser against the deployed site."),
     ),
   );
 }
@@ -970,26 +1324,77 @@ const ROUTES = {
   matrix: matrixView,
   matches: matchesView,
   about: aboutView,
+  games: gamesView,
+  leaderboard: leaderboardView,
+  tournaments: tournamentsView,
+  live: liveView,
+  forum: forumView,
+  stack: stackView,
+  newsletter: newsletterView,
+  rules: rulesView,
+  login: loginView,
+  signup: signupView,
+  account: accountView,
+  upload: uploadView,
 };
 
+let renderSeq = 0;
+
+function updateNavAccount() {
+  const el = document.getElementById("nav-account");
+  if (!el) return;
+  el.textContent = auth.me ? `@${auth.me.handle}` : "Log in";
+  el.href = auth.me ? "#/account" : "#/login";
+  el.title = auth.me ? "Your account and bots" : "Log in or create an account";
+}
+
 async function render() {
-  const { path } = parseHash();
+  const token = ++renderSeq;
+  await ensureAuth();
+  if (token !== renderSeq) return;
+  updateNavAccount();
+
+  const { path, query } = parseHash();
   const key = path[0] || "";
   let view;
   if (key === "team" && path[1]) {
-    view = teamView(decodeURIComponent(path[1]));
+    view = await teamView(decodeURIComponent(path[1]));
+  } else if (key === "games" && path[1]) {
+    view = await gameDetailView(decodeURIComponent(path[1]));
+  } else if (key === "play") {
+    view = playRouterView(query);
+  } else if (key === "tournaments" && path[1]) {
+    view = await tournamentView(decodeURIComponent(path[1]));
+  } else if (key === "forum" && path[1] === "new") {
+    view = await newThreadView();
+  } else if (key === "forum" && path[1]) {
+    view = await threadView(decodeURIComponent(path[1]));
+  } else if (key === "stack" && path[1]) {
+    view = await articleView(decodeURIComponent(path[1]));
+  } else if (key === "season" && path[1]) {
+    view = await seasonView(path[1]);
+  } else if (key === "test" && path[1]) {
+    view = await botTestView(decodeURIComponent(path[1]));
+  } else if (key === "leaderboard") {
+    view = await leaderboardView(query);
+  } else if (key === "forum") {
+    view = await forumView(query);
   } else {
     const fn = ROUTES[key] || playView;
-    view = fn();
+    view = await fn(key === "play" ? query : undefined);
   }
+  if (token !== renderSeq) return;
+
   main.replaceChildren(view);
+  const activeKey = key === "team" ? "teams" : key;
   for (const link of document.querySelectorAll(".tabs a")) {
     const route = link.getAttribute("data-route");
-    const active = route === (key || "play") || (key === "team" && route === "teams");
+    const active = route === (activeKey || "play");
     if (active) link.classList.add("active");
     else link.classList.remove("active");
   }
 }
 
 window.addEventListener("hashchange", render);
+window.addEventListener("arena:refresh", render);
 render();

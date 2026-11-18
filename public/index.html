@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Poker Arena</title>
-  <meta name="description" content="Play a real player against the five renamed poker bots, with the competition's teams, matches and head-to-head matrix.">
+  <title>Poker Arena — bots, games and tournaments</title>
+  <meta name="description" content="A free arena for developer-built poker bots: upload a Python model, play NLH, heads-up, Big Bad Bots, 2-7 Triple Draw and Pineapple OFC, and climb the leaderboard.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b5d3b'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white'%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="/style.css">
 </head>
@@ -13,11 +13,27 @@
     <a href="#/play" id="brand">♠ Poker Arena</a>
     <ul class="tabs">
       <li><a href="#/play" data-route="play">Play</a></li>
-      <li><a href="#/teams" data-route="teams">Teams</a></li>
-      <li><a href="#/matrix" data-route="matrix">Head-to-head</a></li>
-      <li><a href="#/matches" data-route="matches">Matches</a></li>
-      <li><a href="#/about" data-route="about">About</a></li>
+      <li><a href="#/games" data-route="games">Games</a></li>
+      <li><a href="#/leaderboard" data-route="leaderboard">Leaderboard</a></li>
+      <li><a href="#/tournaments" data-route="tournaments">Tournaments</a></li>
+      <li><a href="#/live" data-route="live">Live</a></li>
+      <li><a href="#/forum" data-route="forum">Forum</a></li>
+      <li><a href="#/stack" data-route="stack">The Stack</a></li>
+      <li><a href="#/newsletter" data-route="newsletter">Newsletter</a></li>
+      <li class="more">
+        <details>
+          <summary>More</summary>
+          <div class="more-menu">
+            <a href="#/teams" data-route="teams">Teams</a>
+            <a href="#/matrix" data-route="matrix">Head-to-head</a>
+            <a href="#/matches" data-route="matches">Matches</a>
+            <a href="#/rules" data-route="rules">Rules</a>
+            <a href="#/about" data-route="about">About</a>
+          </div>
+        </details>
+      </li>
     </ul>
+    <a href="#/account" id="nav-account" class="nav-account">Log in</a>
   </nav>
   <main id="main"></main>
   <script type="module" src="/app.js"></script>

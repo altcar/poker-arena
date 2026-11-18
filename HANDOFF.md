@@ -10,7 +10,7 @@ six-handed no-limit Texas hold'em table with the five bots from the
 competition's teams, matches and head-to-head pages.
 
 - **Repo:** https://github.com/altcar/poker-arena (public)
-- **Folder:** `C:\Users\c85-lau\OneDrive - UWE Bristol\poker-arena`
+- **Folder:** the cloned repository (no fixed local path)
 - **Worker:** `poker-arena` (account `Shalev`, account id `4012f7f23d815ed28c0f45e8ce57cd3e`)
 - **D1 database:** `poker-arena` (id `dfe5a016-1a78-4de0-86e4-bac69e0f71f9`)
 - **Deployed site:** https://poker-arena.hheylau.workers.dev
@@ -172,3 +172,65 @@ Two git-connected paths are set up:
    generated results. `/api/matches` still supports POST for compatibility.
 5. **`tvt.pkl` is excluded from the browser assets** (33 MB); tvt runs
    `Model()` instead. The pickle remains in `all-teams/tvt/`.
+
+## Session 3 — the platform (2026-11-18)
+
+The site became a bot platform rather than a fixed five-bot table.
+
+### Added
+
+- **Accounts**: signup/login/logout/me, PBKDF2 (100k, the Workers limit) and
+  HttpOnly cookie sessions in D1.
+- **Uploaded bots**: `POST /api/bots` with model.py, up to six extra modules and
+  an optional pickle (700 KB). Files are served to Pyodide via
+  `/api/bots/:id/files`; `loadUserBot` registers them as `user:<id>`.
+- **Rated challenges**: 20 hands against a four-bot house table, run with
+  `playHand` in the browser, then `POST /api/bots/:id/result` updates Elo.
+- **Leaderboard** with Open/Raised/Elite divisions, house + uploaded bots.
+- **Tournaments** with completed results and open entry (D1 entries).
+- **Live feed** generated from round-robin pairings, refreshed every 6 seconds.
+- **Forum** with categories, threads, replies, pinned/locked.
+- **The Stack** (5 articles), **Newsletter** (D1), **Platform rules** page.
+- **Big Bad Bots**: three bosses, per-seat stacks, autoRebuy=false, rising
+  blinds. Game gained `stacks`, `autoRebuy`, `matchOver` and `playerNames`.
+- **2-7 Triple Draw**: `public/engine/draw27.js` (deuce-to-seven ranking,
+  aces high, fixed-limit betting, three draws, house bot) and
+  `public/views_draw27.js`.
+- **Pineapple OFC**: `public/engine/ofc.js` (13-card placement, row-order fouls,
+  royalties, greedy placement bot) and `public/views_ofc.js`.
+- **Heads-up** setup/challenge flow for JS, competition and uploaded bots.
+- Nav rebuilt: Play, Games, Leaderboard, Tournaments, Live, Forum, The Stack,
+  Newsletter, More (Teams, Head-to-head, Matches, Rules, About), account chip.
+
+### Data
+
+- D1 schema: `src/schema.sql` (applied remotely).
+- Demo account `@arena` / `demo@poker-arena.local` / `arena-demo-2026`, with
+  three uploaded bots (PocketRockets, SevenDeuce, TheStation) seeded by
+  `scripts/seed_platform.mjs`.
+- Forum seeded with four threads (welcome, testing, kickoff, OFC bug).
+
+### Verification
+
+- `npm run test:platform` — 27/27 checks, no console errors, includes a real
+  Pyodide challenge against PocketRockets.
+- `npm run test:forms` — login, upload, tournament entry, newsletter, new
+  thread all pass through the UI.
+- `npm run test:rated` — 20-hand rated test completes and rating persists.
+- `npm run test:modeui` — boss run advances hands; HU vs JS and vs
+  `relief-grid` both play.
+- `npm run test:modes` — 12 draw hands and 8 OFC hands, chips/points conserved.
+- `scripts/test_live_multi.mjs` still passes (6-max with three Python bots).
+
+### Gotchas
+
+- Workers PBKDF2 rejects iteration counts above 100,000.
+- `env.DB.batch` takes prepared statements, not the result of `.run()`.
+- OFC turn order: a player places their whole street in one turn; the human
+  keeps the turn until their hand is empty.
+- OFC `assignments` must account for cards already on the board or the bot
+  overfills a row and loops.
+- `copy_browser_engine.mjs` must not `rm -rf public/engine` any more, or it
+  deletes draw27.js/ofc.js.
+- Headless Edge processes can outlive the test script and hold the debug port;
+  kill the tree before rerunning.
