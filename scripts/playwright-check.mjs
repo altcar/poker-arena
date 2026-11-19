@@ -5,9 +5,11 @@
 
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const BASE = process.argv[2] || process.env.BASE || "https://poker-arena.hheylau.workers.dev";
-const SHOTS = "C:/Users/V9/AppData/Local/Temp/arena-shots";
+const SHOTS = join(tmpdir(), "arena-shots");
 mkdirSync(SHOTS, { recursive: true });
 
 const browser = await chromium.launch({ channel: "msedge", headless: true });
