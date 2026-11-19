@@ -3,10 +3,12 @@ import { AuthProvider } from "./auth.jsx";
 import { PlayProvider } from "./play/context.jsx";
 import Shell from "./components/Shell.jsx";
 import { useRoute } from "./router.js";
-import { Home, Pricing, PrizePool, Business, Rules, About } from "./pages/marketing.jsx";
+import { Pricing, PrizePool, Business, Rules, About } from "./pages/marketing.jsx";
+import Home from "./pages/home.jsx";
 import { Games, GameDetail, Stack, Article, Newsletter, Live, Season, Forum, Thread, NewThread } from "./pages/content.jsx";
 import { Leaderboard, Tournaments, TournamentDetail, Teams, Matrix, Matches, Team } from "./pages/data.jsx";
 import { Login, Signup, Account, Upload, BotTest } from "./pages/account.jsx";
+import { Paper } from "./pages/paper.jsx";
 import Play from "./pages/play.jsx";
 
 function Routes({ route }) {
@@ -58,6 +60,8 @@ function Routes({ route }) {
       return <Signup />;
     case "account":
       return <Account />;
+    case "paper":
+      return <Paper />;
     case "upload":
       return <Upload />;
     case "test":

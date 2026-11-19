@@ -25,6 +25,7 @@ import { teamsData } from "./teams_data.js";
 import { allTeams } from "./all_teams_data.js";
 import { availableTeams } from "./available_teams_data.js";
 import { handlePlatform } from "./platform.js";
+import { handleBilling } from "./billing.js";
 import { PLANS, PRIZE_POOL, PRICING_FAQ, BUSINESS, PRIZE_POOL_NOTE } from "./business_data.js";
 
 const json = (data, status = 200) =>
@@ -105,6 +106,10 @@ async function handleApi(request, env, url) {
       },
     });
   }
+
+  // Stripe Checkout, Customer Portal and the signed webhook.
+  const billing = await handleBilling(request, env, url);
+  if (billing) return billing;
 
   // Accounts, uploaded bots, forum, newsletter, tournaments, seasons and live.
   const platform = await handlePlatform(request, env, url);

@@ -241,3 +241,217 @@ body {
 .mobile-table .astryx-text { color: color-mix(in srgb, white 75%, transparent); }
 .mobile-table .mobile-seat .astryx-text { color: var(--color-text-secondary); }
 .mobile-table .mobile-seat .astryx-text[data-weight="semibold"] { color: var(--color-text-primary); }
+
+/* ================================================================ vivid home */
+
+.home-vivid {
+  background: var(--color-background-body);
+}
+
+.hero-bold {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(118deg, var(--arena-lime) 0%, var(--arena-cyan) 62%, var(--arena-blue) 130%);
+  color: var(--arena-ink);
+  border-bottom: 3px solid var(--arena-ink);
+}
+
+.hero-bold::after {
+  content: "";
+  position: absolute;
+  width: 28rem;
+  height: 28rem;
+  right: -8rem;
+  bottom: -14rem;
+  border-radius: 50%;
+  background: var(--arena-coral);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.hero-title {
+  font-size: clamp(3.4rem, 8.2vw, 7.6rem);
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+  text-transform: uppercase;
+  font-weight: var(--font-weight-bold);
+  max-width: 11ch;
+}
+
+.hero-chip {
+  display: inline-block;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-full);
+  background: var(--arena-ink);
+  color: var(--arena-lime);
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  border: 2px solid var(--arena-ink);
+}
+.hero-chip.light { background: transparent; color: var(--arena-ink); }
+.hero-chip.dark { background: var(--arena-ink); color: var(--arena-lime); }
+
+.pool-card {
+  position: relative;
+  z-index: 1;
+  background: var(--arena-ink);
+  color: white;
+  border: 2px solid var(--arena-ink);
+  border-radius: var(--radius-container);
+  box-shadow: 0.7rem 0.7rem 0 var(--arena-blue);
+  transform: rotate(-1.2deg);
+}
+.pool-card .astryx-divider { border-color: color-mix(in srgb, white 18%, transparent); }
+.pool-eyebrow {
+  color: var(--arena-lime);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  font-weight: var(--font-weight-bold);
+}
+.pool-amount {
+  color: var(--arena-lime) !important;
+  font-size: clamp(3rem, 6vw, 5.4rem);
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+}
+.live-pill {
+  background: var(--arena-lime);
+  color: var(--arena-ink);
+  border-radius: var(--radius-full);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+}
+.rank-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: var(--arena-lime);
+  color: var(--arena-ink);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.ticker {
+  overflow: hidden;
+  white-space: nowrap;
+  background: var(--arena-ink);
+  color: var(--arena-lime);
+  border-bottom: 3px solid var(--arena-ink);
+  padding-block: 0.75rem;
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 30s linear infinite;
+}
+.ticker-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-inline-end: 2rem;
+  font-size: 0.8rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.ticker-row i { color: var(--arena-coral); font-style: normal; }
+@keyframes ticker-scroll { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+
+.stat-tile {
+  border: 2px solid var(--arena-ink);
+  border-radius: var(--radius-container);
+  color: var(--arena-ink);
+  box-shadow: 0.35rem 0.35rem 0 var(--arena-ink);
+  min-height: 10rem;
+}
+.stat-tile.lime { background: var(--arena-lime); }
+.stat-tile.blue { background: var(--arena-blue); color: white; box-shadow: 0.35rem 0.35rem 0 var(--arena-ink); }
+.stat-tile.coral { background: var(--arena-coral); }
+.stat-tile.cream { background: var(--arena-cream); }
+.stat-tile .astryx-text { color: inherit; }
+
+.band-blue {
+  background: var(--arena-blue);
+  color: white;
+  border-block: 3px solid var(--arena-ink);
+}
+.band-blue .astryx-text, .band-blue .astryx-heading { color: inherit; }
+.step-card {
+  background: color-mix(in srgb, white 9%, transparent);
+  border: 2px solid var(--arena-lime);
+  border-radius: var(--radius-container);
+  color: white;
+  box-shadow: 0.35rem 0.35rem 0 var(--arena-ink);
+}
+.step-number {
+  color: var(--arena-lime);
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.04em;
+}
+
+.band-ink {
+  background: var(--arena-ink);
+  color: white;
+  border-block: 3px solid var(--arena-lime);
+}
+.band-ink .astryx-text, .band-ink .astryx-heading { color: inherit; }
+.pool-bar {
+  height: 0.85rem;
+  border: 1px solid color-mix(in srgb, white 24%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, white 8%, transparent);
+  overflow: hidden;
+}
+.pool-bar > div { height: 100%; background: var(--arena-lime); }
+
+.band-lime {
+  background: var(--arena-lime);
+  color: var(--arena-ink);
+  border-block: 3px solid var(--arena-ink);
+}
+.band-lime .astryx-text, .band-lime .astryx-heading { color: inherit; }
+.plan-tile {
+  background: var(--arena-cream);
+  color: var(--arena-ink);
+  border: 2px solid var(--arena-ink);
+  border-radius: var(--radius-container);
+  box-shadow: 0.35rem 0.35rem 0 var(--arena-ink);
+}
+.plan-tile .astryx-text, .plan-tile .astryx-heading { color: inherit; }
+.price-period {
+  font-size: 1rem;
+  font-weight: var(--font-weight-normal);
+  opacity: 0.65;
+  margin-inline-start: 0.25rem;
+}
+
+.newsletter-cta {
+  background: linear-gradient(118deg, var(--arena-coral), var(--arena-lime));
+  color: var(--arena-ink);
+  border: 3px solid var(--arena-ink);
+  border-radius: var(--radius-container);
+  box-shadow: 0.5rem 0.5rem 0 var(--arena-ink);
+}
+.newsletter-cta .astryx-text, .newsletter-cta .astryx-heading { color: inherit; }
+
+@media (max-width: 780px) {
+  .hero-title { font-size: clamp(2.7rem, 13vw, 4.2rem); }
+  .pool-card { transform: none; box-shadow: 0.4rem 0.4rem 0 var(--arena-blue); }
+  .stat-tile { min-height: 0; }
+}
+
+.pool-card .astryx-button {
+  background: var(--arena-lime);
+  border-color: var(--arena-lime);
+  color: var(--arena-ink);
+}
+.pool-card .astryx-button:hover { background: color-mix(in srgb, var(--arena-lime) 85%, white); }

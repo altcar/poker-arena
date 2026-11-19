@@ -28,7 +28,8 @@
     "dev:worker": "wrangler dev",
     "preview": "vite preview",
     "test:e2e": "node scripts/playwright-check.mjs",
-    "astryx": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs"
+    "astryx": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs",
+    "stripe:setup": "node scripts/stripe-setup.mjs"
   },
   "devDependencies": {
     "@astryxdesign/cli": "^0.7.16",

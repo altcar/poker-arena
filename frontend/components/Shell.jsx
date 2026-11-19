@@ -1,6 +1,6 @@
 import React from "react";
 import { AppShell } from "@astryxdesign/core/AppShell";
-import { TopNav, TopNavHeading, TopNavItem, TopNavMenu } from "@astryxdesign/core/TopNav";
+import { TopNav, TopNavHeading, TopNavItem, TopNavMegaMenu, TopNavMegaMenuItem } from "@astryxdesign/core/TopNav";
 import { HStack } from "@astryxdesign/core/HStack";
 import { VStack } from "@astryxdesign/core/VStack";
 import { Grid } from "@astryxdesign/core/Grid";
@@ -14,20 +14,40 @@ import { useAuth } from "../auth.jsx";
 import { go } from "../router.js";
 import { money } from "../api.js";
 
-const moreItems = [
-  { title: "Games and rules", description: "Five formats, from 6-max to Pineapple OFC.", href: "#/games" },
-  { title: "Prize pool", description: "Season 2 purse, payouts and qualification.", href: "#/prize-pool" },
-  { title: "Business plan", description: "How the arena makes money and funds prizes.", href: "#/business" },
-  { title: "Live matches", description: "A rolling feed of tables in progress.", href: "#/live" },
+const competeItems = [
+  { title: "Leaderboard", description: "Open, Raised and Elite divisions.", href: "#/leaderboard" },
+  { title: "Tournaments", description: "Paid events, brackets and entries.", href: "#/tournaments" },
+  { title: "Prize pool", description: "The Season 2 purse and payout split.", href: "#/prize-pool" },
+  { title: "Seasons", description: "Season 2 standings and the Season 1 archive.", href: "#/season/2" },
+  { title: "Teams", description: "All 68 competition teams and their repos.", href: "#/teams" },
+  { title: "Head-to-head", description: "The full 62×62 round-robin matrix.", href: "#/matrix" },
+  { title: "Matches", description: "Every one of the 1,891 matches.", href: "#/matches" },
+];
+
+const communityItems = [
   { title: "Forum", description: "Development, tournaments and bug reports.", href: "#/forum" },
+  { title: "Live matches", description: "A rolling feed of tables in progress.", href: "#/live" },
   { title: "The Stack", description: "Notes on formats, ratings and bot building.", href: "#/stack" },
   { title: "Newsletter", description: "One email when something actually happens.", href: "#/newsletter" },
+];
+
+const docsItems = [
+  { title: "Games and rules", description: "Five formats, from 6-max to Pineapple OFC.", href: "#/games" },
   { title: "Platform rules", description: "Fair play, conduct and appeals.", href: "#/rules" },
-  { title: "Teams", description: "All 68 competition teams and their models.", href: "#/teams" },
-  { title: "Head-to-head", description: "The full 62×62 matrix.", href: "#/matrix" },
-  { title: "Matches", description: "Every round-robin result.", href: "#/matches" },
+  { title: "Business plan", description: "How the arena makes money and funds prizes.", href: "#/business" },
   { title: "About", description: "What this is and how it is built.", href: "#/about" },
 ];
+
+function MegaItems({ items }) {
+  return items.map((item) => (
+    <TopNavMegaMenuItem
+      key={item.href}
+      title={item.title}
+      description={item.description}
+      href={item.href}
+    />
+  ));
+}
 
 function Footer() {
   const year = new Date().getFullYear();
@@ -109,12 +129,11 @@ export default function Shell({ route, children }) {
           }
           startContent={
             <HStack gap={0.5} wrap="wrap">
-              {item("Home", "#/", "home")}
               {item("Play", "#/play", "play")}
               {item("Pricing", "#/pricing", "pricing")}
-              {item("Leaderboard", "#/leaderboard", "leaderboard")}
-              {item("Tournaments", "#/tournaments", "tournaments")}
-              <TopNavMenu label="More" items={moreItems} />
+              <TopNavMegaMenu label="Compete" items={<MegaItems items={competeItems} />} />
+              <TopNavMegaMenu label="Community" items={<MegaItems items={communityItems} />} />
+              <TopNavMegaMenu label="Docs" items={<MegaItems items={docsItems} />} />
             </HStack>
           }
           endContent={

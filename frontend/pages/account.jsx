@@ -13,6 +13,7 @@ import { TextInput } from "@astryxdesign/core/TextInput";
 import { TextArea } from "@astryxdesign/core/TextArea";
 import { Selector } from "@astryxdesign/core/Selector";
 import { FileInput } from "@astryxdesign/core/FileInput";
+import { CheckboxInput } from "@astryxdesign/core/CheckboxInput";
 import { Divider } from "@astryxdesign/core/Divider";
 import { PageHeader, ErrorBanner, Loading, Empty, Stat } from "../components/Common.jsx";
 import { api, bb, ratingText, divisionVariant, formatDate } from "../api.js";
@@ -83,13 +84,24 @@ export function Signup() {
   const [email, setEmail] = useState("");
   const [handle, setHandle] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [accepted, setAccepted] = useState(false);
   const [status, setStatus] = useState("");
+  const plan = new URLSearchParams(String(window.location.hash).split("?")[1] || "").get("plan");
 
   async function submit() {
     setStatus("");
+    if (password !== confirm) {
+      setStatus("The two passwords do not match.");
+      return;
+    }
+    if (!accepted) {
+      setStatus("Accept the platform rules to create an account.");
+      return;
+    }
     try {
       await signup(email, handle, password);
-      go("#/account");
+      go(plan ? `#/pricing?plan=${plan}` : "#/account");
     } catch (error) {
       setStatus(error.message);
     }
@@ -101,18 +113,33 @@ export function Signup() {
         <PageHeader
           eyebrow="Account"
           title="Create a free account"
-          description="One account for your bots, the forum and tournament entries. Open plan, no card."
+          description="One account for your bots, paper bankroll, the forum and tournament entries. No card required."
         />
         <Card padding={6}>
           <VStack gap={4}>
             <TextInput label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" />
             <TextInput label="Handle" value={handle} onChange={setHandle} placeholder="lowercase, 3-24 characters" description="Shown on the forum and next to your bots." />
-            <TextInput label="Password" type="password" value={password} onChange={setPassword} description="At least 8 characters." onEnter={submit} />
+            <TextInput label="Password" type="password" value={password} onChange={setPassword} description="At least 8 characters." />
+            <TextInput label="Confirm password" type="password" value={confirm} onChange={setConfirm} onEnter={submit} />
+            <CheckboxInput
+              label="I agree to the platform rules"
+              value={accepted}
+              onChange={setAccepted}
+              description="Fair play, no wagering, one account per person."
+            />
             <HStack gap={2} vAlign="center" wrap="wrap">
-              <Button label="Sign up" variant="primary" onClick={submit} />
+              <Button label="Sign up" variant="primary" onClick={submit} isDisabled={!accepted || password !== confirm || password.length < 8} />
               <Button label="I already have an account" variant="secondary" onClick={() => go("#/login")} />
             </HStack>
             {status ? <Text type="body" color="secondary">{status}</Text> : null}
+            <Card variant="muted" padding={4}>
+              <VStack gap={1}>
+                <Text type="body" weight="semibold">10,000 paper credits included</Text>
+                <Text type="supporting" color="secondary">
+                  Your paper bankroll starts at 10,000. Rated wins add credits; losses subtract them. It is a scoreboard, not cash.
+                </Text>
+              </VStack>
+            </Card>
             <Text type="supporting" color="secondary">
               By signing up you agree to the <Link href="#/rules" isStandalone>platform rules</Link>.
             </Text>
@@ -124,9 +151,34 @@ export function Signup() {
 }
 
 export function Account() {
-  const { me, bots, ready, logout, refresh } = useAuth();
+  const { me, bots, paper, plan, botLimit, ready, logout, refresh } = useAuth();
+  const [billing, setBilling] = useState(null);
+  const [billingError, setBillingError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!me) return;
+    api("/api/billing").then(setBilling).catch(() => setBilling(null));
+  }, [me]);
+
+  const checkout = new URLSearchParams(String(window.location.hash).split("?")[1] || "").get("checkout");
+
+  async function openPortal() {
+    setBillingError("");
+    setBusy(true);
+    try {
+      const data = await api("/api/billing/portal", { method: "POST" });
+      if (data.url) window.location.href = data.url;
+    } catch (error) {
+      setBillingError(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (!ready) return <Band><Loading label="Loading your account…" /></Band>;
   if (!me) {
@@ -141,22 +193,78 @@ export function Account() {
     );
   }
 
+  const planLabel = plan === "pro" ? "Pro" : plan === "studio" ? "Studio" : "Open";
+  const canManage = billing?.subscription?.hasCustomer;
+
   return (
     <Band>
       <PageHeader
         eyebrow="Account"
         title={`@${me.handle}`}
-        description={me.email}
+        description={`${me.email} · ${planLabel} plan`}
         actions={[
           <Button key="upload" label="Upload a bot" variant="primary" onClick={() => go("#/upload")} />,
-          <Button key="logout" label="Log out" variant="secondary" onClick={async () => { await logout(); go("#/"); }} />,
+          canManage
+            ? <Button key="billing" label="Manage billing" variant="secondary" onClick={openPortal} isLoading={busy} />
+            : <Button key="upgrade" label="Upgrade plan" variant="secondary" onClick={() => go("#/pricing")} />,
+          <Button key="logout" label="Log out" variant="ghost" onClick={async () => { await logout(); go("#/"); }} />,
         ]}
       />
-      <Grid columns={{ minWidth: 200, max: 3 }} gap={4}>
-        <Stat label="Bots" value={bots.length} note={`${bots.reduce((sum, bot) => sum + bot.matches, 0)} rated matches`} />
-        <Stat label="Best rating" value={bots.length ? Math.max(...bots.map((bot) => bot.rating)) : "—"} />
-        <Stat label="Division" value={bots[0]?.division || "—"} note="Uploaded bots start at 1200." />
+
+      {checkout === "success" ? (
+        <Card variant="muted" padding={4}>
+          <Text type="body">Checkout complete. Stripe confirms the subscription in the webhook, then your plan and paper credits update here.</Text>
+        </Card>
+      ) : null}
+
+      <Grid columns={{ minWidth: 200, max: 4 }} gap={4}>
+        <Stat label="Plan" value={planLabel} note={`${botLimit} bot${botLimit === 1 ? "" : "s"} included`} tone="accent" />
+        <Stat label="Paper bankroll" value={paper ? paper.balance.toLocaleString("en-US") : "—"} note="Virtual credits, not cash." />
+        <Stat label="Bots" value={`${bots.length} / ${botLimit}`} note={bots.length >= botLimit ? "Upgrade to add more" : `${botLimit - bots.length} slot${botLimit - bots.length === 1 ? "" : "s"} left`} />
+        <Stat label="Rated matches" value={bots.reduce((sum, bot) => sum + bot.matches, 0)} note="Across all your bots" />
       </Grid>
+
+      {paper ? (
+        <Card padding={6}>
+          <HStack gap={3} hAlign="between" vAlign="center" wrap="wrap">
+            <VStack gap={1}>
+              <Text type="label" color="secondary">Paper account</Text>
+              <Heading level={2}>{paper.balance.toLocaleString("en-US")} credits</Heading>
+              <Text type="supporting" color="secondary">
+                Started at {paper.startingBalance.toLocaleString("en-US")}. Wins add 250; losses subtract 100.
+              </Text>
+            </VStack>
+            <Button label="Open paper account" variant="secondary" onClick={() => go("#/paper")} />
+          </HStack>
+        </Card>
+      ) : null}
+
+      <Card padding={6}>
+        <VStack gap={4}>
+          <HStack hAlign="between" vAlign="center" wrap="wrap">
+            <VStack gap={1}>
+              <Heading level={2}>Billing</Heading>
+              <Text type="body" color="secondary">
+                {planLabel} plan · {billing?.configured ? "Stripe checkout is live" : "Stripe keys not configured yet"}
+              </Text>
+            </VStack>
+            {plan === "open" ? (
+              <Button label="Choose a plan" variant="primary" onClick={() => go("#/pricing")} />
+            ) : (
+              <Button label="Manage billing" variant="secondary" onClick={openPortal} isLoading={busy} />
+            )}
+          </HStack>
+          {billing?.subscription?.currentPeriodEnd ? (
+            <Text type="supporting" color="secondary">
+              Renews {formatDate(billing.subscription.currentPeriodEnd)}{billing.subscription.cancelAtPeriodEnd ? " (cancels at period end)" : ""}.
+            </Text>
+          ) : null}
+          {billingError ? <Text type="body" color="secondary">{billingError}</Text> : null}
+          <Text type="supporting" color="secondary">
+            Payments are handled by Stripe. Pro is $19/month ($190/year); Studio is $99/month ($990/year). Cancel any time.
+          </Text>
+        </VStack>
+      </Card>
 
       {bots.length === 0 ? (
         <Empty

@@ -31,7 +31,7 @@ async function login() {
     await call("/api/auth/login", { method: "POST", body: JSON.stringify({ email: EMAIL, password: PASSWORD }) });
     return;
   } catch {
-    await call("/api/auth/signup", { method: "POST", body: JSON.stringify({ email: EMAIL, handle: HANDLE, password: PASSWORD }) });
+    await call("/api/auth/signup", { method: "POST", body: JSON.stringify({ email: EMAIL, handle: HANDLE, password: PASSWORD, terms: true }) });
   }
 }
 

@@ -304,3 +304,61 @@ plan.
   later hash navigation.
 - Always run `npm run build` before `astryx doctor --built dist`; the doctor
   reads the built bundle.
+
+## Session 5 — paper accounts, real billing, grouped nav, loud home (2026-11-19)
+
+### Paper accounts
+
+- New D1 tables: `paper_accounts`, `paper_transactions`, `subscriptions`,
+  `stripe_events`.
+- Every signup gets 10,000 paper credits and a `signup_bonus` transaction.
+  Existing accounts are backfilled lazily by `ensurePaperAccount`.
+- Rated wins add 250, losses subtract 100; Pro adds 25,000 a paid month,
+  Studio 100,000. Reset returns to the starting balance.
+- `/api/paper` and `/api/paper/reset`; the paper page is `#/paper`.
+- `GET /api/auth/me` now returns `paper`, `plan`, `planLabel`, `botLimit`.
+
+### Real billing (needs secrets)
+
+- `src/billing.js`: Stripe Checkout, Customer Portal, signed webhook.
+- `src/plans.js`: Open 1 bot, Pro 5, Studio 25; prices and paper credits.
+- Bot upload enforces the plan limit with HTTP 402 `code: plan_limit`.
+- Pricing buttons call `/api/billing/checkout`; account has Manage billing.
+- `scripts/stripe-setup.mjs` creates products, prices and the webhook, and prints
+  the secret names. `docs/PAYMENTS.md` has the full setup and test flow.
+- **No Stripe keys are set on the Worker yet**, so `/api/billing` reports
+  `configured: false` and checkout returns 503 `billing_not_configured`. Add the
+  secrets and redeploy to take real payments.
+
+### Navigation
+
+- Removed "More". Primary nav is now Play, Pricing, Compete, Community, Docs.
+- Compete: leaderboard, tournaments, prize pool, seasons, teams, head-to-head,
+  matches. Community: forum, live, Stack, newsletter. Docs: games/rules,
+  platform rules, business plan, about.
+
+### Launch page
+
+- New `frontend/pages/home.jsx` with `vividTheme` (`frontend/vivid-theme.js`).
+- Electric lime → cyan hero, oversized uppercase headline, black pool card with
+  a lime $25,000, marquee ticker, lime/blue/coral stat tiles, blue how-it-works
+  band, black prize-pool band and lime pricing band.
+- Product pages stay on the neutral theme; only the launch page is loud.
+
+### Verification
+
+- `npm run test:e2e` — 42/42: bright hero, grouped nav, signup consent/password
+  validation, paper page, annual pricing, all game modes, Pyodide challenge,
+  login, mobile overflow, no console errors.
+- Paper API checked by hand: signup 10,000; win 10,250; reset 10,000.
+- Upload limit checked: first bot 201, second 402 on Open.
+- `npx astryx doctor --built dist` — 0 failures.
+
+### Gotchas
+
+- Stripe Checkout cannot be exercised until keys exist. Do not fake it.
+- `ensurePaperAccount` backfills a missing `signup_bonus` even if other
+  transactions exist.
+- The landing page's bright colours are `localTokens` in `vividTheme`; they are
+  scoped to the Home `<Theme>`, so the rest of the app stays neutral.
+- Signup requires `terms: true` in the API request.

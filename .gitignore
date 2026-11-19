@@ -29,3 +29,5 @@ data/*-log.txt
 data/python-test-dom.*
 
 dist/
+
+.dev.vars

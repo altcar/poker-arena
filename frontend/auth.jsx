@@ -6,6 +6,9 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [me, setMe] = useState(null);
   const [bots, setBots] = useState([]);
+  const [paper, setPaper] = useState(null);
+  const [plan, setPlan] = useState("open");
+  const [botLimit, setBotLimit] = useState(1);
   const [ready, setReady] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -13,9 +16,15 @@ export function AuthProvider({ children }) {
       const data = await api("/api/auth/me");
       setMe(data.user || null);
       setBots(data.bots || []);
+      setPaper(data.paper || null);
+      setPlan(data.plan || "open");
+      setBotLimit(data.botLimit || 1);
     } catch {
       setMe(null);
       setBots([]);
+      setPaper(null);
+      setPlan("open");
+      setBotLimit(1);
     } finally {
       setReady(true);
     }
@@ -38,7 +47,7 @@ export function AuthProvider({ children }) {
   const signup = useCallback(async (email, handle, password) => {
     const data = await api("/api/auth/signup", {
       method: "POST",
-      body: JSON.stringify({ email, handle, password }),
+      body: JSON.stringify({ email, handle, password, terms: true }),
     });
     setMe(data.user);
     await refresh();
@@ -49,11 +58,14 @@ export function AuthProvider({ children }) {
     await api("/api/auth/logout", { method: "POST" });
     setMe(null);
     setBots([]);
+    setPaper(null);
+    setPlan("open");
+    setBotLimit(1);
   }, []);
 
   const value = useMemo(
-    () => ({ me, bots, ready, refresh, login, signup, logout }),
-    [me, bots, ready, refresh, login, signup, logout],
+    () => ({ me, bots, paper, plan, botLimit, ready, refresh, login, signup, logout }),
+    [me, bots, paper, plan, botLimit, ready, refresh, login, signup, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

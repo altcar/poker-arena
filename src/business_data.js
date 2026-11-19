@@ -47,7 +47,7 @@ export const PLANS = [
     tagline: "For teams, classrooms and private leagues.",
     monthly: 99,
     annual: 990,
-    cta: "Talk to us",
+    cta: "Start Studio",
     highlight: false,
     limits: { bots: 25, challenges: "Unlimited", entries: "10 paid events / month", seats: 5 },
     features: [

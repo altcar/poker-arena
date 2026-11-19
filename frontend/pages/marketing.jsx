@@ -16,6 +16,7 @@ import { Divider } from "@astryxdesign/core/Divider";
 import { PageHeader, SectionHeading, Stat, Price, ErrorBanner, Loading, Prose } from "../components/Common.jsx";
 import { api, getPlatform, getBusiness, money, number, percent, bb, formatDate } from "../api.js";
 import { go } from "../router.js";
+import { useAuth } from "../auth.jsx";
 
 export function Band({ variant = "transparent", padding = 8, children, className = "" }) {
   return (
@@ -27,293 +28,44 @@ export function Band({ variant = "transparent", padding = 8, children, className
   );
 }
 
-function GameCard({ game }) {
-  return (
-    <Card padding={5} elevation="low" className="hover-card">
-      <VStack gap={2}>
-        <HStack gap={2} vAlign="center" wrap="wrap">
-          <Heading level={3}>{game.short}</Heading>
-          <Badge label={game.badges?.[0] || "Format"} variant="neutral" />
-        </HStack>
-        <Text type="body" color="secondary">
-          {game.summary}
-        </Text>
-        <HStack gap={2} wrap="wrap">
-          <Button label="Play" size="sm" variant="primary" onClick={() => go(`#/play?mode=${game.mode}`)} />
-          <Button label="Rules" size="sm" variant="secondary" onClick={() => go(`#/games/${game.slug}`)} />
-        </HStack>
-      </VStack>
-    </Card>
-  );
-}
-
-export function Home() {
-  const [platform, setPlatform] = useState(null);
-  const [board, setBoard] = useState(null);
-  const [business, setBusiness] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let live = true;
-    Promise.allSettled([getPlatform(), api("/api/leaderboard"), getBusiness()])
-      .then(([p, b, biz]) => {
-        if (!live) return;
-        if (p.status === "fulfilled") setPlatform(p.value);
-        if (b.status === "fulfilled") setBoard(b.value);
-        if (biz.status === "fulfilled") setBusiness(biz.value);
-        const failed = [p, b, biz].find((result) => result.status === "rejected");
-        if (failed) setError(failed.reason);
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  const topBots = (board?.bots || []).slice(0, 5);
-  const games = platform?.games || [];
-  const counts = platform?.counts || {};
-  const pool = business?.prizePool;
-
-  return (
-    <>
-      <Section variant="transparent" padding={0} className="hero">
-        <VStack maxWidth={1200} style={{ marginInline: "auto", width: "100%" }} padding={8} gap={6}>
-          <Grid columns={{ minWidth: 360, max: 2 }} gap={8} align="center">
-            <VStack gap={4}>
-              <HStack gap={2} wrap="wrap">
-                <Badge label="Season 2 live" variant="success" />
-                <Badge label="No wagering" variant="neutral" />
-                <Badge label="Free to play" variant="neutral" />
-              </HStack>
-              <Heading level={1} type="display-1">
-                Build the bot. Climb the ladder. Take the pool.
-              </Heading>
-              <Text type="large" color="secondary" as="p" style={{ maxWidth: "58ch" }}>
-                A competitive arena for developer-built poker bots. Upload Python, play fair duplicate-deal
-                matches across five formats, and turn a hackathon project into a season.
-              </Text>
-              <HStack gap={2} wrap="wrap">
-                <Button label="Start free" variant="primary" size="lg" onClick={() => go("#/pricing")} />
-                <Button label="Play the demo" variant="secondary" size="lg" onClick={() => go("#/play")} />
-                <Button label="See the prize pool" variant="ghost" size="lg" onClick={() => go("#/prize-pool")} />
-              </HStack>
-              <HStack gap={6} wrap="wrap">
-                <VStack gap={0}>
-                  <Heading level={3}>{counts.houseBots ? number(counts.houseBots) : "62"}</Heading>
-                  <Text type="supporting" color="secondary">house bots</Text>
-                </VStack>
-                <VStack gap={0}>
-                  <Heading level={3}>{counts.matches ? number(counts.matches) : "1,891"}</Heading>
-                  <Text type="supporting" color="secondary">round-robin matches</Text>
-                </VStack>
-                <VStack gap={0}>
-                  <Heading level={3}>{money(pool?.seasonPool || 25000)}</Heading>
-                  <Text type="supporting" color="secondary">Season 2 pool</Text>
-                </VStack>
-              </HStack>
-            </VStack>
-
-            <Card padding={6} elevation="med" className="hero-panel">
-              <VStack gap={4}>
-                <HStack gap={2} hAlign="between" vAlign="center">
-                  <VStack gap={0}>
-                    <Text type="label" color="secondary">Live ladder</Text>
-                    <Heading level={3}>Top bots</Heading>
-                  </VStack>
-                  <Badge label="Elite" variant="purple" />
-                </HStack>
-                {topBots.length === 0 ? (
-                  <Text type="body" color="secondary">Loading the ladder…</Text>
-                ) : (
-                  <VStack gap={2}>
-                    {topBots.map((bot) => (
-                      <HStack key={bot.name} gap={3} hAlign="between" vAlign="center">
-                        <HStack gap={2} vAlign="center">
-                          <Text type="label" color="secondary" style={{ width: "1.5rem" }}>{bot.place}</Text>
-                          <Text type="body" weight="semibold">{bot.name}</Text>
-                        </HStack>
-                        <HStack gap={2} vAlign="center">
-                          <Text type="body" hasTabularNumbers>{Math.round(bot.rating)}</Text>
-                          <Text type="supporting" color={bot.score > 0 ? "accent" : "secondary"} hasTabularNumbers>
-                            {bb(bot.score)}
-                          </Text>
-                        </HStack>
-                      </HStack>
-                    ))}
-                  </VStack>
-                )}
-                <Divider />
-                <HStack gap={2} hAlign="between" vAlign="center" wrap="wrap">
-                  <VStack gap={0}>
-                    <Text type="supporting" color="secondary">Monthly purse</Text>
-                    <Heading level={3}>{money(pool?.monthlyPool || 2500)}</Heading>
-                  </VStack>
-                  <Button label="Full leaderboard" size="sm" variant="secondary" onClick={() => go("#/leaderboard")} />
-                </HStack>
-              </VStack>
-            </Card>
-          </Grid>
-        </VStack>
-      </Section>
-
-      {error ? <Band><ErrorBanner error={error} /></Band> : null}
-
-      <Band>
-        <SectionHeading
-          eyebrow="The product"
-          title="Everything a bot needs to be taken seriously"
-          description="A fair match engine, a public ladder and a reason to keep improving after the hackathon ends."
-          action={<Button label="How it works" variant="secondary" onClick={() => go("#/about")} />}
-        />
-        <Grid columns={{ minWidth: 240, max: 4 }} gap={4}>
-          <Stat label="House bots" value={counts.houseBots || 62} note="Five JavaScript bots and 57 recovered competition models." />
-          <Stat label="Duplicate-deal matches" value={counts.matches || 1891} note="Every pairing plays the same decks twice, seats swapped." />
-          <Stat label="Formats" value={games.length || 5} note="NLH 6-max, heads-up, Big Bad Bots, 2-7 and OFC." tone="accent" />
-          <Stat label="Season pool" value={money(pool?.seasonPool || 25000)} note="Funded by subscriptions and named sponsors." />
-        </Grid>
-      </Band>
-
-      <Band variant="muted">
-        <SectionHeading
-          eyebrow="How it works"
-          title="From model.py to the final table"
-          description="Three steps, no server-side execution and no mystery about the scoring."
-        />
-        <Grid columns={{ minWidth: 260, max: 3 }} gap={4}>
-          {[
-            { n: "01", t: "Upload a Python bot", d: "One Model class with seed, run and end_game. Up to six extra modules and an optional pickle. It runs in the browser through Pyodide." },
-            { n: "02", t: "Run a rated challenge", d: "Twenty hands against a four-bot house table. The result updates your Elo rating and moves you between Open, Raised and Elite." },
-            { n: "03", t: "Enter the season", d: "Tournaments seed from the ladder. Pro and Studio entries include paid events; the top 32 make the Season Final." },
-          ].map((step) => (
-            <Card key={step.n} padding={5} elevation="low">
-              <VStack gap={2}>
-                <Text type="label" color="accent" weight="semibold">{step.n}</Text>
-                <Heading level={3}>{step.t}</Heading>
-                <Text type="body" color="secondary">{step.d}</Text>
-              </VStack>
-            </Card>
-          ))}
-        </Grid>
-      </Band>
-
-      <Band>
-        <SectionHeading
-          eyebrow="Games"
-          title="Five formats, one ladder"
-          description="Hold'em is the main event. The rest exist because a good bot should survive a change of rules."
-          action={<Button label="All games" variant="secondary" onClick={() => go("#/games")} />}
-        />
-        <Grid columns={{ minWidth: 300, max: 3 }} gap={4}>
-          {games.map((game) => <GameCard key={game.slug} game={game} />)}
-        </Grid>
-      </Band>
-
-      <Band variant="muted">
-        <Grid columns={{ minWidth: 320, max: 2 }} gap={8} align="center">
-          <VStack gap={3}>
-            <Text type="label" color="accent" weight="semibold">The pool</Text>
-            <Heading level={2} type="display-2">A real prize pool, published before the event.</Heading>
-            <Text type="body" color="secondary">
-              {money(pool?.seasonPool || 25000)} for the Season Final, {money(pool?.monthlyPool || 2500)} every month and{" "}
-              {money(pool?.weeklyProPool || 500)} every Sunday. Funded by 40% of subscription revenue and named sponsors.
-            </Text>
-            <HStack gap={2} wrap="wrap">
-              <Button label="Prize pool details" variant="primary" onClick={() => go("#/prize-pool")} />
-              <Button label="Read the business plan" variant="secondary" onClick={() => go("#/business")} />
-            </HStack>
-            <Text type="supporting" color="secondary">
-              No wagering, no paid entry fees. Skill-based competition only.
-            </Text>
-          </VStack>
-          <VStack gap={4}>
-            {(pool?.payouts || []).slice(0, 5).map((row) => (
-              <VStack key={row.place} gap={1}>
-                <HStack gap={2} hAlign="between">
-                  <Text type="body" weight="semibold">{row.place}</Text>
-                  <Text type="body" hasTabularNumbers>{money(row.amount)}</Text>
-                </HStack>
-                <ProgressBar label={`${row.place} share`} value={row.share * 100} max={100} isLabelHidden />
-              </VStack>
-            ))}
-          </VStack>
-        </Grid>
-      </Band>
-
-      <Band>
-        <SectionHeading
-          eyebrow="Pricing"
-          title="Free to start. Pro when it matters."
-          description="The ladder is free. Pro buys volume and paid events. Studio is for teams and private leagues."
-          action={<Button label="Compare plans" variant="secondary" onClick={() => go("#/pricing")} />}
-        />
-        <Grid columns={{ minWidth: 280, max: 3 }} gap={4}>
-          {(business?.plans || []).map((plan) => (
-            <Card key={plan.slug} padding={5} elevation={plan.highlight ? "med" : "none"} className={plan.highlight ? "plan-highlight" : ""}>
-              <VStack gap={3}>
-                <HStack gap={2} hAlign="between" vAlign="center">
-                  <Heading level={3}>{plan.name}</Heading>
-                  {plan.highlight ? <Badge label="Most popular" variant="success" /> : null}
-                </HStack>
-                <Price amount={plan.monthly} period={plan.monthly ? "/ month" : "forever"} />
-                <Text type="body" color="secondary">{plan.tagline}</Text>
-                <Button
-                  label={plan.cta}
-                  variant={plan.highlight ? "primary" : "secondary"}
-                  onClick={() => go(plan.slug === "open" ? "#/signup" : "#/pricing")}
-                />
-              </VStack>
-            </Card>
-          ))}
-        </Grid>
-      </Band>
-
-      <Band variant="muted">
-        <SectionHeading eyebrow="The Stack" title="Notes from the arena" action={<Button label="Read more" variant="secondary" onClick={() => go("#/stack")} />} />
-        <Grid columns={{ minWidth: 260, max: 3 }} gap={4}>
-          {(platform?.stack || []).slice(0, 3).map((article) => (
-            <Card key={article.slug} padding={5} elevation="low" className="hover-card">
-              <VStack gap={2}>
-                <HStack gap={2} wrap="wrap">
-                  <Badge label={article.tag} variant="neutral" />
-                  <Text type="supporting" color="secondary">{formatDate(article.date)}</Text>
-                </HStack>
-                <Heading level={3}>{article.title}</Heading>
-                <Text type="body" color="secondary">{article.excerpt}</Text>
-                <Link href={`#/stack/${article.slug}`} isStandalone>Read the note</Link>
-              </VStack>
-            </Card>
-          ))}
-        </Grid>
-      </Band>
-
-      <Band variant="transparent">
-        <Card variant="muted" padding={8}>
-          <Grid columns={{ minWidth: 300, max: 2 }} gap={6} align="center">
-            <VStack gap={2}>
-              <Heading level={2}>One email when something actually happens.</Heading>
-              <Text type="body" color="secondary">
-                New seasons, tournament dates, format launches and the occasional bot-building note. No drip campaign.
-              </Text>
-            </VStack>
-            <HStack gap={2} wrap="wrap" hAlign="end">
-              <Button label="Join the newsletter" variant="primary" onClick={() => go("#/newsletter")} />
-              <Button label="Upload a bot" variant="secondary" onClick={() => go("#/upload")} />
-            </HStack>
-          </Grid>
-        </Card>
-      </Band>
-    </>
-  );
-}
-
 export function Pricing() {
   const [data, setData] = useState(null);
   const [billing, setBilling] = useState("monthly");
   const [error, setError] = useState(null);
+  const [billingInfo, setBillingInfo] = useState(null);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [busyPlan, setBusyPlan] = useState("");
+  const { me, plan: currentPlan } = useAuth();
 
   useEffect(() => {
     getBusiness().then(setData).catch(setError);
+    api("/api/billing").then(setBillingInfo).catch(() => {});
   }, []);
+
+  async function subscribe(plan) {
+    setCheckoutError("");
+    if (plan === "open") {
+      go("#/signup");
+      return;
+    }
+    if (!me) {
+      go(`#/signup?plan=${plan}`);
+      return;
+    }
+    setBusyPlan(plan);
+    try {
+      const data = await api("/api/billing/checkout", {
+        method: "POST",
+        body: JSON.stringify({ plan, interval: billing }),
+      });
+      if (data.url) window.location.href = data.url;
+      else setCheckoutError("Stripe did not return a checkout URL.");
+    } catch (cause) {
+      setCheckoutError(cause.message);
+    } finally {
+      setBusyPlan("");
+    }
+  }
 
   if (error) return <Band><ErrorBanner error={error} /></Band>;
   if (!data) return <Band><Loading label="Loading plans…" /></Band>;
@@ -355,14 +107,15 @@ export function Pricing() {
                 <VStack gap={4}>
                   <HStack gap={2} hAlign="between" vAlign="center">
                     <Heading level={2}>{plan.name}</Heading>
-                    {plan.highlight ? <Badge label="Most popular" variant="success" /> : null}
+                    {currentPlan === plan.slug ? <Badge label="Your plan" variant="success" /> : plan.highlight ? <Badge label="Most popular" variant="success" /> : null}
                   </HStack>
                   <Price amount={amount} period={amount ? (billing === "annual" ? "/ year" : "/ month") : "forever"} />
                   <Text type="body" color="secondary">{plan.tagline}</Text>
                   <Button
                     label={plan.cta}
                     variant={plan.highlight ? "primary" : "secondary"}
-                    onClick={() => go(plan.slug === "open" ? "#/signup" : plan.slug === "studio" ? "#/newsletter" : "#/signup")}
+                    isLoading={busyPlan === plan.slug}
+                    onClick={() => subscribe(plan.slug)}
                   />
                   <Divider />
                   <VStack gap={2}>
@@ -381,8 +134,10 @@ export function Pricing() {
             );
           })}
         </Grid>
+        {checkoutError ? <Text type="body" color="secondary">{checkoutError}</Text> : null}
         <Text type="supporting" color="secondary">
-          Prices in USD. Cancel any time. Annual plans are billed once and include two months free.
+          Prices in USD. Cancel any time. Annual plans are billed once and include two months free.{" "}
+          {billingInfo && !billingInfo.configured ? "Stripe checkout is being configured; the keys are not set yet." : "Secure checkout by Stripe."}
         </Text>
       </Band>
 

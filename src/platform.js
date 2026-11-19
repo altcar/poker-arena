@@ -4,6 +4,7 @@
 import { GAMES, DIVISIONS, TOURNAMENTS, SEASONS } from "./platform_data.js";
 import { STACK } from "./stack_data.js";
 import { ourTournament } from "./our_tournament_data.js";
+import { PLAN_LIMITS, PAPER_STARTING_BALANCE } from "./plans.js";
 
 const COOKIE = "pa_session";
 const SESSION_DAYS = 30;
@@ -66,7 +67,7 @@ function sessionCookie(token, url, maxAge = SESSION_DAYS * 86400) {
   return `${COOKIE}=${token}; Path=/; HttpOnly;${secure} SameSite=Lax; Max-Age=${maxAge}`;
 }
 
-async function currentUser(request, env) {
+export async function currentUser(request, env) {
   const token = cookies(request)[COOKIE];
   if (!token) return null;
   const row = await env.DB.prepare(
@@ -82,6 +83,110 @@ async function currentUser(request, env) {
 function publicUser(user) {
   if (!user) return null;
   return { id: user.id, handle: user.handle, email: user.email, role: user.role, createdAt: user.created_at };
+}
+
+export async function ensurePaperAccount(env, userId) {
+  const existing = await env.DB.prepare("SELECT * FROM paper_accounts WHERE user_id = ?").bind(userId).first();
+  if (existing) {
+    const welcome = await env.DB.prepare(
+      "SELECT id FROM paper_transactions WHERE user_id = ? AND kind = 'signup_bonus' LIMIT 1"
+    ).bind(userId).first();
+    if (!welcome) {
+      await env.DB.prepare(
+        "INSERT OR IGNORE INTO paper_transactions (id, user_id, kind, amount, balance_after, note, created_at) VALUES (?, ?, 'signup_bonus', ?, ?, ?, ?)"
+      ).bind(crypto.randomUUID(), userId, existing.starting_balance, existing.balance, "Welcome paper bankroll", Date.now()).run();
+    }
+    return existing;
+  }
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO paper_accounts (user_id, balance, starting_balance, currency, created_at, updated_at) VALUES (?, ?, ?, 'PAPER', ?, ?)"
+    ).bind(userId, PAPER_STARTING_BALANCE, PAPER_STARTING_BALANCE, now, now),
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO paper_transactions (id, user_id, kind, amount, balance_after, note, created_at) VALUES (?, ?, 'signup_bonus', ?, ?, ?, ?)"
+    ).bind(crypto.randomUUID(), userId, PAPER_STARTING_BALANCE, PAPER_STARTING_BALANCE, "Welcome paper bankroll", now),
+  ]);
+  return env.DB.prepare("SELECT * FROM paper_accounts WHERE user_id = ?").bind(userId).first();
+}
+
+export async function addPaperTransaction(env, userId, kind, amount, note = "") {
+  const account = await ensurePaperAccount(env, userId);
+  const next = Math.max(0, account.balance + amount);
+  const actual = next - account.balance;
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE paper_accounts SET balance = ?, updated_at = ? WHERE user_id = ?").bind(next, now, userId),
+    env.DB.prepare(
+      "INSERT INTO paper_transactions (id, user_id, kind, amount, balance_after, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).bind(crypto.randomUUID(), userId, kind, actual, next, String(note).slice(0, 160), now),
+  ]);
+  return { account: { ...account, balance: next, updated_at: now }, transaction: { amount: actual } };
+}
+
+export async function getSubscription(env, userId) {
+  return env.DB.prepare("SELECT * FROM subscriptions WHERE user_id = ?").bind(userId).first();
+}
+
+export async function getPlan(env, userId) {
+  const subscription = await getSubscription(env, userId);
+  if (subscription && ["active", "trialing"].includes(subscription.status) && subscription.plan !== "open") {
+    return subscription.plan;
+  }
+  return "open";
+}
+
+export async function upsertSubscription(env, data) {
+  const now = Date.now();
+  await env.DB.prepare(
+    `INSERT INTO subscriptions
+       (user_id, plan, status, interval, stripe_customer_id, stripe_subscription_id, current_period_end, cancel_at_period_end, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       plan = excluded.plan,
+       status = excluded.status,
+       interval = excluded.interval,
+       stripe_customer_id = COALESCE(excluded.stripe_customer_id, subscriptions.stripe_customer_id),
+       stripe_subscription_id = COALESCE(excluded.stripe_subscription_id, subscriptions.stripe_subscription_id),
+       current_period_end = COALESCE(excluded.current_period_end, subscriptions.current_period_end),
+       cancel_at_period_end = excluded.cancel_at_period_end,
+       updated_at = excluded.updated_at`
+  )
+    .bind(
+      data.userId,
+      data.plan || "open",
+      data.status || "active",
+      data.interval || "monthly",
+      data.customerId || null,
+      data.subscriptionId || null,
+      data.periodEnd || null,
+      data.cancelAtPeriodEnd ? 1 : 0,
+      now,
+    )
+    .run();
+}
+
+export async function paperSummary(env, userId) {
+  const account = await ensurePaperAccount(env, userId);
+  const rows = await env.DB.prepare(
+    "SELECT * FROM paper_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 100"
+  ).bind(userId).all();
+  return {
+    account: {
+      balance: account.balance,
+      startingBalance: account.starting_balance,
+      currency: account.currency,
+      updatedAt: account.updated_at,
+    },
+    transactions: (rows.results || []).map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      amount: row.amount,
+      balanceAfter: row.balance_after,
+      note: row.note,
+      createdAt: row.created_at,
+    })),
+  };
 }
 
 const slugify = (value) =>
@@ -259,6 +364,7 @@ export async function handlePlatform(request, env, url) {
     if (!email) return json({ error: "enter a valid email address" }, 400);
     if (!handle) return json({ error: "handle must be 3-24 characters: letters, numbers, _ or -" }, 400);
     if (password.length < 8) return json({ error: "password must be at least 8 characters" }, 400);
+    if (body.terms !== true) return json({ error: "accept the platform rules to create an account" }, 400);
     const taken = await env.DB.prepare("SELECT id FROM users WHERE email = ? OR handle = ?").bind(email, handle).first();
     if (taken) return json({ error: "that email or handle is already registered" }, 409);
     const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
@@ -277,8 +383,14 @@ export async function handlePlatform(request, env, url) {
         now + SESSION_DAYS * 86400000
       ),
     ]);
+    const paper = await ensurePaperAccount(env, id);
+    await upsertSubscription(env, { userId: id, plan: "open", status: "active", interval: "monthly" });
     return json(
-      { user: { id, email, handle, role: "member", createdAt: now } },
+      {
+        user: { id, email, handle, role: "member", createdAt: now },
+        paper: { balance: paper.balance, startingBalance: paper.starting_balance, currency: paper.currency },
+        plan: "open",
+      },
       201,
       { "set-cookie": sessionCookie(token, url) }
     );
@@ -309,12 +421,48 @@ export async function handlePlatform(request, env, url) {
 
   if (method === "GET" && path === "/api/auth/me") {
     if (!user) return json({ user: null });
-    const bots = await env.DB.prepare(
-      "SELECT * FROM user_bots WHERE user_id = ? ORDER BY created_at DESC"
-    )
-      .bind(user.id)
-      .all();
-    return json({ user: publicUser(user), bots: (bots.results || []).map(botRow) });
+    const [bots, paper, subscription] = await Promise.all([
+      env.DB.prepare("SELECT * FROM user_bots WHERE user_id = ? ORDER BY created_at DESC").bind(user.id).all(),
+      ensurePaperAccount(env, user.id),
+      getSubscription(env, user.id),
+    ]);
+    const plan = subscription && ["active", "trialing"].includes(subscription.status) && subscription.plan !== "open"
+      ? subscription.plan
+      : "open";
+    return json({
+      user: publicUser(user),
+      bots: (bots.results || []).map(botRow),
+      paper: { balance: paper.balance, startingBalance: paper.starting_balance, currency: paper.currency },
+      plan,
+      planLabel: PLAN_LIMITS[plan]?.label || "Open",
+      botLimit: PLAN_LIMITS[plan]?.bots || 1,
+      subscription: subscription
+        ? {
+            plan: subscription.plan,
+            status: subscription.status,
+            interval: subscription.interval,
+            currentPeriodEnd: subscription.current_period_end,
+            cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+            hasCustomer: Boolean(subscription.stripe_customer_id),
+          }
+        : null,
+    });
+  }
+
+  if (method === "GET" && path === "/api/paper") {
+    if (!user) return json({ error: "log in to view your paper account" }, 401);
+    const summary = await paperSummary(env, user.id);
+    return json({ ...summary, plan: await getPlan(env, user.id) });
+  }
+
+  if (method === "POST" && path === "/api/paper/reset") {
+    if (!user) return json({ error: "log in to reset your paper account" }, 401);
+    const account = await ensurePaperAccount(env, user.id);
+    const delta = account.starting_balance - account.balance;
+    if (delta !== 0) {
+      await addPaperTransaction(env, user.id, "reset", delta, "Paper bankroll reset to the starting balance");
+    }
+    return json({ ...(await paperSummary(env, user.id)), plan: await getPlan(env, user.id) });
   }
 
   // ---------------------------------------------------------------- platform data
@@ -352,6 +500,18 @@ export async function handlePlatform(request, env, url) {
 
   if (method === "POST" && path === "/api/bots") {
     if (!user) return json({ error: "log in to upload a bot" }, 401);
+    const plan = await getPlan(env, user.id);
+    const limit = PLAN_LIMITS[plan]?.bots || 1;
+    const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM user_bots WHERE user_id = ?").bind(user.id).first();
+    if ((count?.n || 0) >= limit) {
+      return json({
+        error: `Your ${PLAN_LIMITS[plan]?.label || "Open"} plan includes ${limit} bot${limit === 1 ? "" : "s"}. Upgrade to add more.`,
+        code: "plan_limit",
+        plan,
+        limit,
+        count: count?.n || 0,
+      }, 402);
+    }
     const body = await readJson(request);
     const name = String(body.name || "").trim();
     if (name.length < 2 || name.length > 40) return json({ error: "bot name must be 2-40 characters" }, 400);
@@ -478,10 +638,22 @@ export async function handlePlatform(request, env, url) {
             now
           ),
       ]);
+      const paperAmount = result === "win" ? 250 : result === "loss" ? -100 : 0;
+      let paper = null;
+      if (paperAmount !== 0) {
+        paper = await addPaperTransaction(
+          env,
+          user.id,
+          result === "win" ? "rated_win" : "rated_loss",
+          paperAmount,
+          `${result === "win" ? "Won" : "Lost"} a rated challenge against ${opponent}`,
+        );
+      }
       const updated = await env.DB.prepare("SELECT * FROM user_bots WHERE id = ?").bind(id).first();
       return json({
         bot: botRow({ ...updated, owner: user.handle }),
         change: Math.round((after - before) * 10) / 10,
+        paper: paper ? { balance: paper.account.balance, amount: paper.transaction.amount } : null,
       });
     }
 

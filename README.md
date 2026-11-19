@@ -1,8 +1,9 @@
 # Poker Arena
 
 A competitive arena for developer-built poker bots. Upload a Python model, climb
-the ladder, enter prize-pool tournaments and play five poker formats. Free to
-play; subscriptions and sponsors fund the pool.
+the ladder, enter prize-pool tournaments and play five poker formats. Every
+account gets a **10,000-credit paper bankroll**; Pro and Studio are real Stripe
+subscriptions and fund the prize pool.
 
 **Live:** <https://poker-arena.hheylau.workers.dev>
 
@@ -12,6 +13,7 @@ play; subscriptions and sponsors fund the pool.
 |---|---|
 | **Home** | The pitch, the live ladder, the purse and the formats. |
 | **Play** | Six-max, heads-up, Big Bad Bots, 2-7 Triple Draw and Pineapple OFC. |
+| **Paper account** | Virtual bankroll, P&L and transaction history. Created on signup. |
 | **Pricing** | Open, Pro and Studio plans, annual billing, comparison and FAQ. |
 | **Prize pool** | Season 2 purse, monthly and weekly pools, payout splits and qualification. |
 | **Business plan** | Problem, product, market, revenue streams, unit economics, projections, risks. |
@@ -31,9 +33,14 @@ play; subscriptions and sponsors fund the pool.
   entries a month and full match analytics.
 - **Studio** is $99/month or $990/year: 25 bots, five seats, private leagues,
   API access and sponsor slots.
+- **Every signup** starts with **10,000 paper credits**. Rated wins add 250,
+  losses subtract 100. Pro adds 25,000 credits a month; Studio adds 100,000.
 - **40% of subscription revenue** is ring-fenced for the prize pool, topped up by
   sponsors. Season 2 pool: **$25,000**. Monthly purse: **$2,500**. Weekly Pro
   Cup: **$500**.
+- Checkout, the Customer Portal and the signed webhook are implemented with
+  **Stripe**. See [`docs/PAYMENTS.md`](docs/PAYMENTS.md) for the keys and the
+  test flow.
 - No wagering and no paid entry fees. Prizes are skill-based and funded by
   subscriptions and sponsors. The full plan, unit economics and projections are
   on `#/business`.
@@ -102,6 +109,10 @@ npm run deploy       # wrangler deploy; the build runs automatically
 `npm run dev` proxies `/api` to Wrangler. `npm run preview` serves the built app
 and proxies `/api` to the live Worker.
 
+The nav is grouped into **Play, Pricing, Compete, Community and Docs**; the
+Compete menu holds the leaderboard, tournaments, pool, seasons, teams, matrix
+and matches, so there is no catch-all "More" menu.
+
 ### Design system
 
 - `npx astryx theme list` — installed themes.
@@ -117,12 +128,15 @@ and passes `themes[defaultThemeSlug]` into `defineTheme({extends, ...})` in
 ## Back end
 
 - `src/worker.js` — assets plus the original game and tournament API.
-- `src/platform.js` — accounts, bots, leaderboard, forum, newsletter,
-  tournaments, seasons and live.
+- `src/platform.js` — accounts, paper accounts, bots, leaderboard, forum,
+  newsletter, tournaments, seasons and live.
+- `src/billing.js` — Stripe Checkout, Customer Portal and webhook.
+- `src/plans.js` — plan limits, prices and paper credits.
 - `src/business_data.js` — plans, prize pool and business plan; served at
   `GET /api/business`.
 - `src/schema.sql` — D1 tables (`users`, `auth_sessions`, `user_bots`,
-  `bot_results`, `threads`, `posts`, `newsletter`, `tournament_entries`).
+  `bot_results`, `threads`, `posts`, `newsletter`, `tournament_entries`,
+  `paper_accounts`, `paper_transactions`, `subscriptions`, `stripe_events`).
 
 ```sh
 npm run db:schema     # apply D1 migrations
@@ -138,6 +152,12 @@ Demo login: `demo@poker-arena.local` / `arena-demo-2026`.
 | `POST /api/auth/signup` / `login` / `logout` | Account and session. |
 | `GET /api/auth/me` | Current user and owned bots. |
 | `GET /api/business` | Plans, prize pool, FAQ and business plan. |
+| `GET /api/paper` | Paper bankroll and transaction history. |
+| `POST /api/paper/reset` | Reset the paper bankroll to 10,000. |
+| `GET /api/billing` | Plan, subscription status and Stripe configuration. |
+| `POST /api/billing/checkout` | `{ plan, interval }` → Stripe Checkout URL. |
+| `POST /api/billing/portal` | Stripe Customer Portal URL. |
+| `POST /api/webhooks/stripe` | Signed Stripe webhook. |
 | `GET /api/platform` | Games, rules, divisions, seasons, Stack index and counts. |
 | `POST /api/bots` | Upload `{ name, description, mode, source, extras, pickle, pklName }`. |
 | `GET /api/bots/:id/files` | `model.py`, extras and pickle for Pyodide. |
@@ -163,8 +183,9 @@ npm run test:e2e        # Playwright: every page, all game modes, Pyodide, mobil
 ```
 
 `npm run test:e2e` drives headless Edge through Playwright against the deployed
-site. It checks 35 assertions, including a real 20-hand Pyodide challenge, the
-six-max table, heads-up, the boss run, 2-7, OFC, login, annual pricing and mobile
+site. It checks 42 assertions, including the bright launch hero, the grouped
+navigation, signup validation, the paper account, annual pricing, a real 20-hand
+Pyodide challenge, six-max, heads-up, the boss run, 2-7, OFC, login and mobile
 overflow. Screenshots are written to the system temp folder.
 
 ## Layout
@@ -172,12 +193,12 @@ overflow. Screenshots are written to the system temp folder.
 ```
 frontend/
   main.jsx, App.jsx, theme.js, styles.css
-  api.js, auth.jsx, router.js
+  api.js, auth.jsx, router.js, theme.js, vivid-theme.js
   components/       Shell, page header, stats, footer
-  pages/            marketing, content, data and account pages
+  pages/            home, marketing, content, data, account, paper
   play/             play context, poker table, draw27 and OFC tables
 src/
-  worker.js, platform.js, business_data.js, schema.sql
+  worker.js, platform.js, billing.js, plans.js, business_data.js, schema.sql
   engine.js, game.js, bots.js, policy.js, ...   the JS engine
   draw27.js, ofc.js                             the two new game engines
 public/

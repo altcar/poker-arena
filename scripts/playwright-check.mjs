@@ -43,7 +43,7 @@ watch(page, errors);
 // ---------------------------------------------------------------- static pages
 
 const pages = [
-  ["#/", "Build the bot. Climb the ladder."],
+  ["#/", "TAKE THE POOL"],
   ["#/pricing", "Free to play. Paid to compete."],
   ["#/prize-pool", "$25,000 on the table"],
   ["#/business", "A competitive layer for the bots people build."],
@@ -58,6 +58,7 @@ const pages = [
   ["#/stack/your-first-bot", "Your first bot"],
   ["#/newsletter", "One email when something actually happens"],
   ["#/rules", "Rules that keep the arena fair"],
+  ["#/paper", "Log in to see your paper bankroll"],
   ["#/about", "A competitive arena for bots people build"],
   ["#/teams", "Every competition team"],
   ["#/matrix", "The full round robin"],
@@ -73,6 +74,30 @@ for (const [hash, text] of pages) {
     check(`page ${hash}`, false, String(error).split("\n")[0]);
   }
 }
+
+// ---------------------------------------------------------------- hero and navigation
+
+await open(page, "#/", "TAKE THE POOL");
+const homeText = await page.locator("body").innerText();
+check("bright launch hero renders", homeText.includes("$25,000") && homeText.includes("10,000 PAPER CREDITS"));
+check("nav uses Compete / Community / Docs", homeText.includes("Compete") && homeText.includes("Community") && homeText.includes("Docs") && !homeText.includes("More"));
+await page.getByRole("button", { name: "Compete" }).hover();
+await page.getByText("Leaderboard", { exact: false }).filter({ visible: true }).first().waitFor({ timeout: 5000 });
+check("Compete menu is categorised", true);
+await page.screenshot({ path: `${SHOTS}/home-bold.png`, fullPage: false });
+
+// ---------------------------------------------------------------- signup validation
+
+await open(page, "#/signup", "Create a free account");
+const signupButton = page.getByRole("button", { name: "Sign up", exact: true });
+check("signup requires consent and a password match", await signupButton.isDisabled());
+await page.getByLabel("Email").fill("not-a-real-test@example.com");
+await page.getByLabel("Handle").fill("e2etest");
+await page.getByLabel("Password", { exact: true }).fill("password123");
+await page.getByLabel("Confirm password").fill("password123");
+await page.getByLabel("I agree to the platform rules").check();
+check("signup enables after valid input", !(await signupButton.isDisabled()));
+await open(page, "#/pricing", "Free to play");
 
 // ---------------------------------------------------------------- pricing toggle
 
@@ -195,6 +220,18 @@ try {
   check("login reaches the account page", true);
 } catch {
   check("login reaches the account page", false);
+}
+
+try {
+  await page.waitForFunction(() => location.hash.includes("/account"), null, { timeout: 10000 });
+  await page.goto(`${BASE}/#/paper`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => document.body.innerText.includes("A virtual bankroll"), null, { timeout: 20000 });
+  const paperText = await page.locator("body").innerText();
+  const paperOk = paperText.includes("10,000") && paperText.includes("Paper balance");
+  check("paper account shows the starting bankroll", paperOk, paperOk ? "" : paperText.slice(0, 180));
+  await page.screenshot({ path: `${SHOTS}/paper.png`, fullPage: false });
+} catch (error) {
+  check("paper account shows the starting bankroll", false, String(error).split("\n")[0]);
 }
 
 check("no console or page errors", errors.length === 0, errors.slice(0, 4).join(" | "));

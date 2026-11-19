@@ -1,7 +1,8 @@
 # New session — start here
 
 Poker Arena is a competitive arena for developer-built poker bots, live at
-**https://poker-arena.hheylau.workers.dev**.
+**https://poker-arena.hheylau.workers.dev**. Every account gets a 10,000-credit
+paper bankroll; Pro and Studio are Stripe subscriptions.
 
 - **Repo:** https://github.com/altcar/poker-arena (public)
 - **Worker:** `poker-arena` (account Shalev, `4012f7f23d815ed28c0f45e8ce57cd3e`)
@@ -21,11 +22,18 @@ Poker Arena is a competitive arena for developer-built poker bots, live at
 
 Home, Play, Pricing, Prize pool, Business plan, Games, Leaderboard,
 Tournaments, Live, Forum, The Stack, Newsletter, Rules, About, Teams,
-Head-to-head, Matches, Season, Account, Upload, Bot test, Login, Signup.
+Head-to-head, Matches, Season, Account, Paper account, Upload, Bot test, Login,
+Signup.
+
+Nav is grouped into Play, Pricing, Compete, Community and Docs. There is no
+catch-all More menu.
 
 ## Product model
 
 - Open (free), Pro ($19/mo), Studio ($99/mo); annual billing available.
+- Every signup gets 10,000 paper credits; rated wins/losses move the bankroll.
+- Stripe Checkout, Customer Portal and webhook are implemented in
+  `src/billing.js`; see `docs/PAYMENTS.md` for the secrets and test flow.
 - 40% of subscription revenue funds the prize pool, plus sponsors.
 - Season 2 pool $25,000; $2,500 monthly; $500 weekly Pro Cup.
 - No wagering, no paid entry fees; skill-based competition only.
@@ -41,10 +49,15 @@ Content lives in `src/business_data.js` and is served at `GET /api/business`.
 - `frontend/pages/content.jsx` — Games, Stack, Newsletter, Live, Forum, Season.
 - `frontend/pages/data.jsx` — Leaderboard, Tournaments, Teams, Matrix, Matches.
 - `frontend/pages/account.jsx` — Login, Signup, Account, Upload, rated BotTest.
+- `frontend/pages/paper.jsx` — Paper bankroll, P&L and transactions.
+- `frontend/pages/home.jsx` — bright launch page (vivid theme).
 - `frontend/play/` — play context, poker table, 2-7 and OFC tables.
 - `src/platform.js` — platform API.
 - `src/draw27.js`, `src/ofc.js` — the two extra game engines.
 - `src/worker.js` — assets + game API + `/api/business`.
+- `src/billing.js` — Stripe checkout, portal and signed webhook.
+- `src/plans.js` — plan limits and paper credits.
+- `docs/PAYMENTS.md` — live/test Stripe setup.
 
 ## Run and deploy
 
@@ -65,7 +78,7 @@ npm run verify          # engine invariants
 npm run verify:python
 npm run verify:js
 npm run test:modes      # draw27 + OFC simulations
-npm run test:e2e        # Playwright, 35 checks, desktop + mobile
+npm run test:e2e        # Playwright, 42 checks, desktop + mobile
 npx astryx doctor --built dist
 ```
 
@@ -88,8 +101,12 @@ mobile horizontal overflow. Screenshots go to the system temp folder.
 
 - Uploaded code runs in the visitor's browser; rated results are self-reported
   and accepted in good faith.
-- No payment provider is wired yet. Pricing and plan limits are product copy;
-  enforcement and billing are the next step.
+- Payment code is live but needs Worker secrets before checkout works:
+  `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and the four price IDs. Run
+  `STRIPE_SECRET_KEY=... npm run stripe:setup` or follow `docs/PAYMENTS.md`.
+- Plan limits are enforced on bot upload. Paid tournament entry quotas are not
+  enforced yet.
+- Email verification and password reset are not implemented.
 - No password reset or moderation UI.
 - 11 of the 68 competition teams never published a discoverable repository.
 - `legacy/` holds the previous vanilla UI and CDP tests for reference only.

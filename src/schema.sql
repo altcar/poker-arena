@@ -100,3 +100,44 @@ CREATE TABLE IF NOT EXISTS tournament_entries (
 );
 
 CREATE INDEX IF NOT EXISTS tournament_entries_tid ON tournament_entries (tournament_id);
+
+-- Virtual bankroll created for every account. Not cash, not withdrawable.
+CREATE TABLE IF NOT EXISTS paper_accounts (
+  user_id TEXT PRIMARY KEY,
+  balance INTEGER NOT NULL,
+  starting_balance INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'PAPER',
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS paper_transactions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  balance_after INTEGER NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS paper_transactions_user ON paper_transactions (user_id, created_at DESC);
+
+-- One row per account. plan stays "open" until a Stripe subscription is active.
+CREATE TABLE IF NOT EXISTS subscriptions (
+  user_id TEXT PRIMARY KEY,
+  plan TEXT NOT NULL DEFAULT 'open',
+  status TEXT NOT NULL DEFAULT 'active',
+  interval TEXT NOT NULL DEFAULT 'monthly',
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  current_period_end INTEGER,
+  cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS stripe_events (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
