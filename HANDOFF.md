@@ -234,3 +234,73 @@ The site became a bot platform rather than a fixed five-bot table.
   deletes draw27.js/ofc.js.
 - Headless Edge processes can outlive the test script and hold the debug port;
   kill the tree before rerunning.
+
+## Session 4 — redesign, pricing and business plan (2026-11-19)
+
+The site was rebuilt as a React 19 + Vite SPA on the Astryx design system and
+turned into a business: pricing tiers, a published prize pool and a business
+plan.
+
+### Design system
+
+- Installed `@astryxdesign/core`, `@stylexjs/stylex`,
+  `@astryxdesign/theme-neutral` and `@astryxdesign/cli`.
+- `npx astryx init --all` wrote `AGENTS.md`, `GEMINI.md` and
+  `theme.template.ts`; read `AGENTS.md` before editing.
+- `npx astryx theme add neutral` wrote `src/astryx-themes.js`.
+- `frontend/theme.js` extends `themes[defaultThemeSlug]` with the arena radius,
+  Figtree typography and calmer buttons/cards. `<Theme>` is mounted in
+  `frontend/main.jsx` with `mode="system"`.
+- The previous vanilla UI is in `legacy/` (not served).
+
+### New product pages
+
+- **Pricing**: Open / Pro / Studio, monthly + annual, comparison, FAQ.
+- **Prize pool**: Season 2 $25,000, monthly $2,500, weekly $500, payout splits,
+  schedule, qualification, funding.
+- **Business plan**: problem, product, market, revenue streams, unit economics,
+  three-year projection, use of funds, roadmap, risks.
+- Data in `src/business_data.js`; `GET /api/business`.
+
+### New front end
+
+- `frontend/pages/marketing.jsx` — Home, Pricing, PrizePool, Business, Rules, About.
+- `frontend/pages/content.jsx` — Games, GameDetail, Stack, Article, Newsletter,
+  Live, Season, Forum, Thread, NewThread.
+- `frontend/pages/data.jsx` — Leaderboard, Tournaments, TournamentDetail, Teams,
+  Team, Matrix, Matches.
+- `frontend/pages/account.jsx` — Login, Signup, Account, Upload, BotTest.
+- `frontend/pages/play.jsx` + `frontend/play/` — setup, table, boss, draw27, OFC.
+- Mobile table switches from the oval to a stacked layout under 720px.
+
+### Build and deploy
+
+- `vite.config.js`: publicDir `public`, outDir `dist`, dev proxy to Wrangler.
+- `wrangler.jsonc`: assets `dist`, `build.command` runs the Vite build.
+- `.github/workflows/deploy.yml` now runs `npm ci` and `npx wrangler deploy`.
+- `dist/` is ignored.
+
+### Verification
+
+- `npx astryx doctor --built dist` — 0 failures.
+- `npm run test:e2e` — 35/35 Playwright checks: every route, annual pricing,
+  leaderboard filtering, forum thread, six-max, heads-up, boss run, 2-7, OFC,
+  a real Pyodide challenge, login, no console errors, mobile overflow.
+- `npm run test:modes` — 12 draw hands and 8 OFC hands.
+- `npm run verify` — 100 hands, chips conserved.
+
+### Gotchas
+
+- The Neutral theme does **not** define `--color-categorical-*` tokens. Using
+  them invalidates the whole `color-mix()` background. Use `--color-success`
+  (green felt) and `--color-info` (card backs), mixed with `black`.
+- Astryx renders duplicate aria-hidden text nodes. Playwright `getByText`
+  `.first()` can pick the hidden node; use `page.waitForFunction` on body text
+  or `.filter({visible: true})`.
+- TabList uses the navigation pattern by default, so it renders buttons without
+  `role="tab"`; click by visible label.
+- `TournamentDetail` must read `data.entries`; the static tournament object has
+  no `entries` field. Reading it unmounted the React tree and blanked every
+  later hash navigation.
+- Always run `npm run build` before `astryx doctor --built dist`; the doctor
+  reads the built bundle.

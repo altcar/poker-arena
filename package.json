@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Play a real player against the five renamed poker bots, with the competition site's matches, matrix, teams and tournament pages.",
+  "description": "A competitive arena for developer-built poker bots: upload Python models, rated challenges, divisions, prize-pool tournaments, forum, newsletter and five poker formats.",
   "scripts": {
     "verify": "node scripts/verify.mjs",
     "verify:python": "python scripts/python_play.py",
     "verify:js": "node scripts/js_play.mjs",
-    "dev": "wrangler dev",
+    "dev": "vite",
     "deploy": "wrangler deploy",
     "csv": "node scripts/make_teams_csv.mjs",
     "all-teams": "node scripts/download_team_files.mjs",
@@ -24,13 +24,24 @@
     "db:schema": "wrangler d1 execute poker-arena --remote --file=src/schema.sql",
     "seed": "node scripts/seed_platform.mjs",
     "test:modes": "node scripts/test_new_modes.mjs",
-    "test:platform": "node scripts/test_platform_ui.mjs",
-    "test:forms": "node scripts/test_forms_ui.mjs",
-    "test:rated": "node scripts/test_rated_ui.mjs",
-    "test:modeui": "node scripts/test_modes_ui.mjs",
-    "test:uploaded": "node scripts/test_uploaded_table.mjs"
+    "build": "vite build",
+    "dev:worker": "wrangler dev",
+    "preview": "vite preview",
+    "test:e2e": "node scripts/playwright-check.mjs",
+    "astryx": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs"
   },
   "devDependencies": {
+    "@astryxdesign/cli": "^0.7.16",
+    "@vitejs/plugin-react": "^6.3.0",
+    "playwright": "^1.65.1",
+    "vite": "^8.3.8",
     "wrangler": "^4.160.0"
+  },
+  "dependencies": {
+    "@astryxdesign/core": "^0.7.16",
+    "@astryxdesign/theme-neutral": "^0.7.16",
+    "@stylexjs/stylex": "^0.19.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   }
 }

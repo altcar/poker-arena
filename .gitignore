@@ -27,3 +27,5 @@ data/sync-log.txt
 data/*-test.txt
 data/*-log.txt
 data/python-test-dom.*
+
+dist/

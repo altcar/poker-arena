@@ -25,6 +25,7 @@ import { teamsData } from "./teams_data.js";
 import { allTeams } from "./all_teams_data.js";
 import { availableTeams } from "./available_teams_data.js";
 import { handlePlatform } from "./platform.js";
+import { PLANS, PRIZE_POOL, PRICING_FAQ, BUSINESS, PRIZE_POOL_NOTE } from "./business_data.js";
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -193,6 +194,17 @@ async function handleApi(request, env, url) {
 
   if (method === "GET" && path === "/api/teams") {
     return json({ teams: staticTeams, bots: BOTS, allTeams, availableTeams: availableTeams.teams, teamsData });
+  }
+
+  if (method === "GET" && path === "/api/business") {
+    return json({
+      plans: PLANS,
+      prizePool: PRIZE_POOL,
+      faq: PRICING_FAQ,
+      business: BUSINESS,
+      note: PRIZE_POOL_NOTE,
+      currency: "USD",
+    });
   }
 
   if (method === "GET" && path === "/api/teams.csv") {
